@@ -96,4 +96,38 @@ describe("block-to-form", () => {
     const mount = postgres2?.volume_mounts?.[0];
     expect(mount?.source_volume_name).toBe("pgdata-2");
   });
+
+  /** Catalog blocks are single-service today, so the multi-service preset here
+   *  is what makes the carry testable. Without it a de-duplicated block binds to
+   *  the same-named resource already in the stack, which validates and deploys wrong. */
+  it("repoints a de-duplicated block's own references at its copy", () => {
+    const pair = {
+      id: "pair",
+      name: "Pair",
+      category: getBlockById(BlockId.Postgres)!.category,
+      icon: "box",
+      summary: "two services",
+      compose: [
+        "services:",
+        "  postgres:",
+        "    image: postgres:16",
+        "  app:",
+        "    image: app:1",
+        "    depends_on:",
+        "      - postgres",
+        "    environment:",
+        '      DB_HOST: "${postgres.host}"',
+      ].join("\n"),
+    };
+
+    let stack = emptyStack();
+    stack = addBlockToStack(stack, getBlockById(BlockId.Postgres)!);
+    stack = addBlockToStack(stack, pair);
+
+    expect(stack.spec.stack_resources.map((r) => r.name)).toContain("postgres-2");
+    const app = stack.spec.stack_resources.find((r) => r.name === "app");
+    expect(app?.depends_on).toEqual(["postgres-2"]);
+    const rows = (app?.execution_config?.environment_variables ?? []) as Array<{ resourceName?: string }>;
+    expect(rows.find((row) => row.resourceName != null)?.resourceName).toBe("postgres-2");
+  });
 });

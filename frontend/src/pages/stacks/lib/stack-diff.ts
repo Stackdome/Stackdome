@@ -14,6 +14,9 @@ import type {
 export type ResourceArr = Partial<FormStackResourceData>[];
 export type VolumeArr = Partial<FormVolumeExtendedData>[];
 
+import type { FormEnvRow } from "@/pages/stacks/lib/connection-mapping";
+import { deleteResourceAndReferences } from "@/pages/stacks/lib/delete-references";
+import { renameResourceReferences } from "@/pages/stacks/lib/rename-references";
 import { deepEqual, pairByFingerprint } from "@/pages/stacks/lib/stack-model/equal";
 import { getAtPath } from "@/pages/stacks/lib/stack-model/path";
 import { resourceFingerprint, volumeFingerprint } from "@/pages/stacks/lib/stack-model/diff";
@@ -26,12 +29,59 @@ export function cloneJson<T>(v: T): T {
   return JSON.parse(JSON.stringify(v)) as T;
 }
 
+/**
+ * Siblings point at whatever name the resource carried while it was renamed, so
+ * a revert that restores the old name has to bring them back with it.
+ * Keyed on the name actually changing, not on which field was reverted.
+ */
+function carryNameRevert(resources: ResourceArr, idx: number, nameBefore?: string): ResourceArr {
+  const nameAfter = resources[idx]?.name;
+  if (!nameBefore || nameBefore === nameAfter) return resources;
+  // A draft-only resource has no baseline name to restore, so reverting the
+  // field clears it. Siblings then have nothing to point at.
+  if (!nameAfter) return deleteResourceAndReferences(resources, nameBefore);
+  return renameResourceReferences(resources, nameBefore, nameAfter);
+}
+
+/**
+ * Drop the restored entry's references to resources the draft no longer has.
+ * A baseline that predates a sibling's rename names something now gone.
+ */
+function dropUnknownResourceRefs(resources: ResourceArr, idx: number): ResourceArr {
+  const entry = resources[idx];
+  if (!entry) return resources;
+
+  const known = new Set(resources.map((r) => r.name).filter(Boolean));
+  const deps = entry.depends_on ?? [];
+  const keptDeps = deps.filter((d) => known.has(d));
+  const rows = (entry.execution_config?.environment_variables ?? []) as FormEnvRow[];
+  const keptRows = rows.filter(
+    (row) =>
+      (row.from !== "resource" && row.from !== "resourceTemplate") || known.has(row.resourceName),
+  );
+
+  const depsChanged = keptDeps.length !== deps.length;
+  const rowsChanged = keptRows.length !== rows.length;
+  if (!depsChanged && !rowsChanged) return resources;
+
+  const next = resources.slice();
+  next[idx] = {
+    ...entry,
+    ...(depsChanged ? { depends_on: keptDeps } : {}),
+    ...(rowsChanged
+      ? { execution_config: { ...entry.execution_config, environment_variables: keptRows } }
+      : {}),
+  };
+  return next;
+}
+
 export function revertResource(
   draft: { resources: ResourceArr; volumes: VolumeArr },
   baseline: { resources: ResourceArr; volumes: VolumeArr },
   idx: number,
 ): { resources: ResourceArr; volumes: VolumeArr } {
   const next = { ...draft, resources: draft.resources.slice() };
+  const nameBefore = draft.resources[idx]?.name;
   // A name-aligned baseline can carry nullish holes for draft-only resources
   // (see alignBaselineToDraft) — treat those the same as "past the end".
   const baselineEntry = idx < baseline.resources.length ? baseline.resources[idx] : undefined;
@@ -52,8 +102,12 @@ export function revertResource(
       );
     }
     next.resources[idx] = restored;
+    next.resources = dropUnknownResourceRefs(carryNameRevert(next.resources, idx, nameBefore), idx);
+  } else if (nameBefore) {
+    // The resource only exists in the draft, so dropping it is a delete and
+    // has to take its references with it.
+    next.resources = deleteResourceAndReferences(next.resources, nameBefore);
   } else {
-    // The resource only exists in the draft — drop it.
     next.resources.splice(idx, 1);
   }
   return next;
@@ -248,7 +302,13 @@ export function revertResourceField(
   const nextResource = setAtPath(draftResource, path, cloneJson(baselineValue));
   const nextResources = draft.resources.slice();
   nextResources[resourceIdx] = nextResource;
-  return { ...draft, resources: nextResources };
+  return {
+    ...draft,
+    resources: dropUnknownResourceRefs(
+      carryNameRevert(nextResources, resourceIdx, draftResource.name),
+      resourceIdx,
+    ),
+  };
 }
 
 export function revertVolume(

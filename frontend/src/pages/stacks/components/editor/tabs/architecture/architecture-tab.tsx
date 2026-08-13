@@ -31,6 +31,84 @@ import {
 } from "@/pages/stacks/lib/canvas/layout-graph";
 import { resolveCollisions, type CollidableNode } from "@/pages/stacks/lib/canvas/resolve-collisions";
 import { carryPositions } from "@/pages/stacks/lib/canvas/carry-positions";
+import {
+  deleteResourceAndReferences,
+  findResourceDependents,
+  type EnvRef,
+  type ResourceDependents,
+} from "@/pages/stacks/lib/delete-references";
+
+function groupByResource(refs: EnvRef[]): Map<string, string[]> {
+  const byResource = new Map<string, string[]>();
+  for (const ref of refs) {
+    const keys = byResource.get(ref.resource) ?? [];
+    keys.push(ref.envName);
+    byResource.set(ref.resource, keys);
+  }
+  return byResource;
+}
+
+// Spans, not divs: this renders inside AlertDialogDescription, which is a <p>.
+function SummaryRow({ resource, detail }: { resource: string; detail: string }) {
+  return (
+    <span className="flex gap-2 text-[12.5px]">
+      <span className="min-w-[8rem] shrink-0 font-mono text-foreground">{resource}</span>
+      <span className="font-mono text-fg-muted">{detail}</span>
+    </span>
+  );
+}
+
+/** What the delete is about to change, grouped by consequence: repaired,
+ *  handed back, or left unattached. */
+function DeleteResourceSummary({ dependents }: { dependents: ResourceDependents }) {
+  const { dependsOn, envRefs, literalRefs, orphanedVolumes } = dependents;
+  const consequences = dependsOn.length + envRefs.length + literalRefs.length + orphanedVolumes.length;
+  if (consequences === 0) {
+    return <>The service and its configuration are removed when the stack deploys. This cannot be undone after deploy.</>;
+  }
+
+  const envByResource = groupByResource(envRefs);
+  const repaired = new Set([...dependsOn, ...envByResource.keys()]);
+
+  return (
+    <span className="flex flex-col gap-3">
+      <span>The service is removed when the stack deploys. This cannot be undone after deploy.</span>
+
+      {repaired.size > 0 && (
+        <span className="flex flex-col gap-1">
+          <span className="text-[11px] font-medium tracking-wide text-success uppercase">Updated automatically</span>
+          {[...repaired].map((name) => (
+            <SummaryRow
+              key={name}
+              resource={name}
+              detail={[dependsOn.includes(name) && "depends_on", ...(envByResource.get(name) ?? [])]
+                .filter(Boolean)
+                .join(", ")}
+            />
+          ))}
+        </span>
+      )}
+
+      {literalRefs.length > 0 && (
+        <span className="flex flex-col gap-1">
+          <span className="text-[11px] font-medium tracking-wide text-warn uppercase">Left for you to fix</span>
+          {literalRefs.map((ref, i) => (
+            <SummaryRow key={i} resource={ref.resource} detail={ref.envName} />
+          ))}
+        </span>
+      )}
+
+      {orphanedVolumes.length > 0 && (
+        <span className="flex flex-col gap-1">
+          <span className="text-[11px] font-medium tracking-wide text-fg-muted uppercase">Left unattached</span>
+          {orphanedVolumes.map((name) => (
+            <SummaryRow key={name} resource={name} detail="mounted by nothing" />
+          ))}
+        </span>
+      )}
+    </span>
+  );
+}
 
 /** Collision-box dims for nodes React Flow hasn't measured yet (fresh layout
  *  output) — attachment cards are markedly smaller than resource cards. */
@@ -628,18 +706,24 @@ function StackCanvasFlow({
 
   const onRequestDeleteResource = useCallback(
     async (resourceName: string) => {
+      // Read the same draft applyDraft will mutate, not the liveMode view.
+      const shown = session.isActive ? session.draft : { resources: draftResources, volumes: draftVolumes };
+      const dependents = findResourceDependents(shown.resources, shown.volumes, resourceName);
+
       const ok = await confirm({
         title: `Delete service “${resourceName}”?`,
-        description:
-          "The service and its configuration are removed when the stack deploys. This cannot be undone after deploy.",
+        description: <DeleteResourceSummary dependents={dependents} />,
         confirmLabel: "Delete",
         variant: "destructive",
       });
       if (!ok) return;
-      applyDraft((draft) => ({ ...draft, resources: draft.resources.filter((r) => r.name !== resourceName) }));
+      applyDraft((draft) => ({
+        ...draft,
+        resources: deleteResourceAndReferences(draft.resources, resourceName),
+      }));
       setDrawerStack([]);
     },
-    [confirm, applyDraft],
+    [confirm, applyDraft, session, draftResources, draftVolumes],
   );
 
   const onCreateVolume = useCallback(
@@ -709,12 +793,21 @@ function StackCanvasFlow({
     },
     [session, draftVolumes],
   );
+  // The drawer deletes by index; everything else deletes by name.
   const removeResource = useCallback(
     (idx: number) => {
+      const name = resources[idx]?.name;
+      const shared = !!name && resources.filter((r) => r.name === name).length > 1;
+      if (name && !shared) {
+        void onRequestDeleteResource(name);
+        return;
+      }
+      // Unnamed, or one of several holding the same name: the index is the only
+      // identity, and a reference to a name a sibling still holds stays valid.
       session.updateResources((prev) => prev.filter((_, i) => i !== idx));
       setDrawerStack([]);
     },
-    [session],
+    [onRequestDeleteResource, resources, session],
   );
 
   // Drop panels whose target no longer exists in the shown list (deleted

@@ -1,0 +1,103 @@
+import type { FormEnvRow } from "@/pages/stacks/lib/connection-mapping";
+import type { ResourceArr, VolumeArr } from "@/pages/stacks/lib/stack-diff";
+
+/** An env row: `resource` holds it, `envName` is its key. */
+export interface EnvRef {
+  resource: string;
+  envName: string;
+}
+
+export interface ResourceDependents {
+  /** Resources holding a `depends_on` entry for the target. */
+  dependsOn: string[];
+  /** Structured rows that will be removed. */
+  envRefs: EnvRef[];
+  /** Literal values that merely mention the target. Flagged, never rewritten. */
+  literalRefs: EnvRef[];
+  /** Volumes the target mounted that nothing else mounts. */
+  orphanedVolumes: string[];
+}
+
+const namesResource = (row: FormEnvRow, name: string) =>
+  (row.from === "resource" || row.from === "resourceTemplate") && row.resourceName === name;
+
+const envRowsOf = (r: ResourceArr[number]) =>
+  (r.execution_config?.environment_variables ?? []) as FormEnvRow[];
+
+/**
+ * What breaks if `name` is deleted. Reports only; the pruning itself lives in
+ * `deleteResourceAndReferences`.
+ *
+ * A literal row counts only when `from` is "stack" and the value mentions
+ * `${name.`; such rows are reported for the user to fix, never rewritten.
+ */
+export function findResourceDependents(
+  resources: ResourceArr,
+  volumes: VolumeArr,
+  name: string,
+): ResourceDependents {
+  const dependsOn: string[] = [];
+  const envRefs: EnvRef[] = [];
+  const literalRefs: EnvRef[] = [];
+  const literalMention = `\${${name}.`;
+
+  for (const r of resources) {
+    if (!r.name || r.name === name) continue;
+
+    if ((r.depends_on ?? []).includes(name)) dependsOn.push(r.name);
+
+    for (const row of envRowsOf(r)) {
+      if (namesResource(row, name)) {
+        envRefs.push({ resource: r.name, envName: row.name });
+      } else if (row.from === "stack" && row.value?.includes(literalMention)) {
+        literalRefs.push({ resource: r.name, envName: row.name });
+      }
+    }
+  }
+
+  const mountsOf = (keep: boolean) =>
+    new Set(
+      resources
+        .filter((r) => (r.name === name) === keep)
+        .flatMap((r) => (r.volume_mounts ?? []).map((m) => m.source_volume_name)),
+    );
+  // A volume nothing mounted to begin with is not this delete's doing.
+  const mountedByTarget = mountsOf(true);
+  const mountedElsewhere = mountsOf(false);
+  const orphanedVolumes = volumes
+    .map((v) => v?.name)
+    .filter((v): v is string => !!v && mountedByTarget.has(v) && !mountedElsewhere.has(v));
+
+  return { dependsOn, envRefs, literalRefs, orphanedVolumes };
+}
+
+/**
+ * Remove a resource, the `depends_on` entries naming it, and the structured env
+ * rows naming it. Volume mounts are left alone.
+ *
+ * Untouched resources are returned by identity so the diff keeps pairing them.
+ */
+export function deleteResourceAndReferences(resources: ResourceArr, name: string): ResourceArr {
+  if (!name) return resources;
+
+  return resources
+    .filter((r) => r.name !== name)
+    .map((r) => {
+      const rows = envRowsOf(r);
+      const keptRows = rows.filter((row) => !namesResource(row, name));
+      const deps = r.depends_on ?? [];
+      const keptDeps = deps.filter((d) => d !== name);
+
+      const rowsChanged = keptRows.length !== rows.length;
+      const depsChanged = keptDeps.length !== deps.length;
+      if (!rowsChanged && !depsChanged) return r;
+
+      return {
+        ...r,
+        ...(depsChanged ? { depends_on: keptDeps } : {}),
+        ...(rowsChanged
+          ? { execution_config: { ...r.execution_config, environment_variables: keptRows } }
+          : {}),
+      } as ResourceArr[number];
+    });
+}
