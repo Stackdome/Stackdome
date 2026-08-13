@@ -104,20 +104,14 @@ With nothing mounted it says so, and points you back at **+ Add resource → Vol
 
 ## Access modes
 
-Every volume Stackdome creates is `ReadWriteOnce`. The drawer shows it as `ReadWriteOnce (RWO)` and offers no alternative; the dialog has no access-mode field. The REST contract's `Volume` schema does define three values — `ReadWriteOnce`, `ReadWriteMany` and `ReadOnlyMany` — but the dashboard only ever sends the first, and the field cannot be changed after creation.
-
-What that means in practice: **one node can mount the volume, and only that node.** Two resources both scheduled onto that node can share it. A resource whose replicas land on different nodes cannot — the replicas that land elsewhere will not start, because the disk is not available to them.
-
-<Warning>
-**This bites when you add a second node, not when you add a second replica.** On a single-node install every pod lands on the same node, so a shared volume and a scaled-up resource both appear to work. Add a node to the cluster and the same stack can start failing to schedule, with no change on your side. If a resource needs storage and more than one replica, give each replica its own volume, or keep the resource at one replica.
-</Warning>
+Stackdome currently supports `ReadWriteOnce` volumes only.
 
 ## Changing a volume on a running stack
 
 | What you want | What actually happens |
 | --- | --- |
 | **Add a volume** | Created and queued for provisioning as soon as the editor saves — you do not wait for a deploy. The mount lands on the cluster at the next deploy. |
-| **Mount an existing volume somewhere else** | A spec change on the resource. Takes effect at the next deploy. Remember the single-node constraint above. |
+| **Mount an existing volume somewhere else** | A spec change on the resource. Takes effect at the next deploy. |
 | **Resize, rename, or change the access mode** | Not possible. Those fields are write-once in the API and disabled in the drawer. Delete the volume and create a new one — which means losing the data. |
 | **Delete a volume** | Immediate and permanent, independent of any deploy. The confirmation says so: *"This immediately and permanently destroys the volume and all data stored on it. Any mounts are removed first. This cannot be undone."* A volume you added but have not saved yet is just **Remove**d from **a draft**. |
 

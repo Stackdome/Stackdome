@@ -262,7 +262,7 @@ resources:
 volumes:
   pg-data:
     size: 5Gi                # required — e.g. 512Mi, 5Gi, 1Ti
-    access_mode: ReadWriteOnce   # default; also ReadOnlyMany, ReadWriteMany
+    access_mode: ReadWriteOnce   # currently the only supported mode
 ```
 
 A mount referencing an undeclared volume is a parse error.

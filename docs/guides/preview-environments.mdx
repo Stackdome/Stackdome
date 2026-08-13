@@ -183,8 +183,6 @@ Then click **Create environment**. A manual environment does not follow new comm
 <Warning>
 Every open pull request builds and runs a **full copy of the stack** — every resource, and every **volume** with its **mount**, that the stackfile declares. Ten open pull requests against a repository with a five-resource stack means fifty running resources on top of production.
 
-**There is no build-concurrency limit in Stackdome.** Nothing queues or throttles simultaneous builds: if ten pull requests are opened at once, ten sets of builds start at once and compete for the same destination capacity. On single-node self-hosted Kubernetes compute, that is enough to saturate the node and push builds into deploy timeouts.
-
 The only limit is **Max active previews**, per configuration, defaulting to `10`. It caps how many environments can exist at once — not how many build at once. When a configuration is at its cap, a new pull request creates nothing: the delivery is logged as skipped and no comment is posted, so the pull request looks like previews are simply not enabled. Set the cap to what your deployment destination can actually hold.
 </Warning>
 

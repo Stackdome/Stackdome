@@ -222,7 +222,7 @@ Deploying takes a snapshot of the stack and resolves it — that snapshot is wha
 - **Plain text** — copied through unchanged.
 - **Self** — the output is looked up on the resource itself and becomes a literal value.
 - **Resource** / **Template** — outputs are looked up on the source resource; a template is executed against them.
-- **Secret** / **Addon** — the values are written into the stack's namespace and the variable is pointed at them by name, not copied into the manifest.
+- **Secret** / **Addon** — the selected value is loaded when the resource starts.
 
 If resolution cannot finish, the release fails and the reason is on its timeline. The messages you are most likely to meet:
 
