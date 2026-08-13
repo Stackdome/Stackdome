@@ -5,7 +5,7 @@ description: Break a superpowers plan into independently-grabbable issues on the
 
 ## Gate (superpowers spine)
 
-Precondition: a superpowers plan exists under `docs/superpowers/plans/` for this topic. If absent, REFUSE and tell the user to run `superpowers:writing-plans` first.
+Precondition: a superpowers plan exists under `dev-docs/plans/` for this topic. If absent, REFUSE and tell the user to run `superpowers:writing-plans` first.
 
 Derive independently-grabbable vertical-slice issues FROM that plan's tasks — the plan is authoritative; do not invent scope outside it. Publish each as a GitHub issue with the correct triage label per `docs/agents/triage-labels.md`, in dependency order (blockers first).
 
@@ -19,7 +19,7 @@ The issue tracker and triage label vocabulary live in `docs/agents/` (`issue-tra
 
 ### 1. Gather context
 
-First locate and read the superpowers plan under `docs/superpowers/plans/` (the gate guarantees it exists) — it is the source of truth for scope. Then work from whatever else is already in the conversation context. If the user passes an issue reference (issue number, URL, or path) as an argument, fetch it from the issue tracker and read its full body and comments.
+First locate and read the superpowers plan under `dev-docs/plans/` (the gate guarantees it exists) — it is the source of truth for scope. Then work from whatever else is already in the conversation context. If the user passes an issue reference (issue number, URL, or path) as an argument, fetch it from the issue tracker and read its full body and comments.
 
 ### 2. Explore the codebase (optional)
 
@@ -27,7 +27,7 @@ If you have not already explored the codebase, do so to understand the current s
 
 ### 3. Draft vertical slices
 
-The superpowers plan under `docs/superpowers/plans/` is the source of truth — derive slices by grouping the plan's tasks into independently-grabbable vertical slices; do not introduce work the plan doesn't contain. Break the plan into **tracer bullet** issues. Each issue is a thin vertical slice that cuts through ALL integration layers end-to-end, NOT a horizontal slice of one layer.
+The superpowers plan under `dev-docs/plans/` is the source of truth — derive slices by grouping the plan's tasks into independently-grabbable vertical slices; do not introduce work the plan doesn't contain. Break the plan into **tracer bullet** issues. Each issue is a thin vertical slice that cuts through ALL integration layers end-to-end, NOT a horizontal slice of one layer.
 
 Slices may be 'HITL' or 'AFK'. HITL slices require human interaction, such as an architectural decision or a design review. AFK slices can be implemented and merged without human interaction. Prefer AFK over HITL where possible.
 

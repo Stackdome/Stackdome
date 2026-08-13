@@ -82,7 +82,7 @@ Notes:
 
 ## Agent skills
 
-Superpowers is the workflow **spine** for all tasks: `superpowers:brainstorming` → spec (`docs/superpowers/specs/`), `superpowers:writing-plans` → plan (`docs/superpowers/plans/`), `superpowers:executing-plans`/TDD/debugging per superpowers. The repo-local skills in `.claude/skills/` are permitted as below; some gate on a superpowers artifact, others are off-spine utilities. `tdd`, `write-a-skill`, `caveman` are intentionally absent — the superpowers / global-plugin equivalents are authoritative.
+Superpowers is the workflow **spine** for all tasks: `superpowers:brainstorming` → spec (`dev-docs/specs/`), `superpowers:writing-plans` → plan (`dev-docs/plans/`), which is git-ignored so neither lands in this repo; `superpowers:executing-plans`/TDD/debugging per superpowers. The repo-local skills in `.claude/skills/` are permitted as below; some gate on a superpowers artifact, others are off-spine utilities. `tdd`, `write-a-skill`, `caveman` are intentionally absent — the superpowers / global-plugin equivalents are authoritative.
 
 | Skill | Use only | Gate |
 |---|---|---|
