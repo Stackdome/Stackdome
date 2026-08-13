@@ -23,13 +23,13 @@
 
 Stackdome is an open-source, self-hostable alternative to Railway, Render, and Heroku.
 
-Describe your whole application in one declarative stackfile: services, databases,
-volumes, and domains. Stackdome takes it from git push or container image to a live,
-healthy release.
+Your whole application, described once and shipped as one unit: the services, the
+databases, the storage they sit on. Stackdome takes it from a git push or a container
+image to a live release.
 
-Builds, managed Postgres, TLS, preview environments, and rollbacks are built in.
-Drive it from your coding agent, the CLI, or the visual Canvas. Run it on our cloud
-or your own compute.
+The delivery layer comes with it: builds, managed Postgres with backups, TLS, a full
+preview environment per branch, and a way back to any previous release. Drive it from
+your coding agent, the Canvas, or the CLI, on our cloud or your own compute.
 
 ## Three ways in
 
