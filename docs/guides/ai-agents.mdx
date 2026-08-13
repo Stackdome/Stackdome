@@ -1,20 +1,14 @@
 ---
 title: "Deploy with a coding agent"
-description: "Set up and deploy an application with a coding agent, then fix common failures."
-keywords: ["coding agent deployment", "AI agent workflow", "agent operating contract", "release verification", "failure recovery"]
+description: "Give your coding agent one prompt to deploy an application with Stackdome."
+keywords: ["coding agent deployment", "agent prompt", "Stackdome agent", "deploy application"]
 ---
 
-Stackdome works with coding agents and developers. A coding agent reads your repository, creates a Stackfile, deploys the application to Stackdome Cloud or your self-hosted installation, checks that it is running, and returns its public URL.
-
-The canonical flow is:
-
-```text
-Inspect repository -> stackdome init -> edit generated Stackfile -> stackdome validate -> authenticate with token -> deploy --wait -o json -> status -o json -> return URL
-```
+Your coding agent can prepare the Stackfile, deploy the application, check that it is running, and return its public URL.
 
 ## Before the agent starts
 
-The agent needs the repository, the destination URL, and an API token. The user creates and revokes tokens; the agent never requests or handles an account password. See [authentication and API tokens](/reference/authentication).
+The agent needs the repository, your Stackdome URL, and an API token. You create and revoke the token. The agent never needs your account password. See [authentication and API tokens](/reference/authentication).
 
 Copy this and paste it into your agent:
 

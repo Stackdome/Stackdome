@@ -79,7 +79,7 @@ Registry credentials live under **INTEGRATIONS → `Image Registries`** in the s
 
 ![The Image registries page with no credentials added, showing the heading Image registries, the subtitle about storing registry credentials, and an empty dashed panel reading NO IMAGE REGISTRIES YET above an Add registry button](/images/image-registries.png)
 
-This page lists only credentials your organization has added for registries elsewhere. A cluster's own image registry is not shown here and does not need a credential — an empty page does not mean your install has no registry.
+This page lists credentials your organization added for external registries. An empty page is normal when you use only public images.
 
 #### Add a credential
 
@@ -229,8 +229,8 @@ The fix in both cases is to stop pulling anonymously: add a Docker Hub credentia
 Reach for an image source when you did not write the thing you are running, or when your build already happens somewhere else and publishes to a registry. Reach for a git source when the code is yours and you want the deploy to start from a commit rather than from an image you have to remember to build and push — that path pins revisions per release, so a rollback is exact.
 
 <CardGroup cols={2}>
-  <Card title="Deploy with a coding agent" icon="sparkles" href="/guides/ai-agents">
-    Follow the complete agent operating contract, verification rules, and failure routes.
+  <Card title="CLI workflows" icon="terminal" href="/reference/cli-workflows#deploy-an-image">
+    Deploy an image from a terminal, coding agent, or CI job.
   </Card>
   <Card title="Stackfile reference" icon="file-code" href="/reference/stackfile">
     Configure image sources, ports, environment values, dependencies, and storage.

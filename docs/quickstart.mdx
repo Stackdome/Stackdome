@@ -24,7 +24,7 @@ Open your coding agent in the repository and send this prompt:
 Deploy this repository to Stackdome and give me the live URL.
 ```
 
-The agent inspects the repository, runs `stackdome init`, edits the generated `stackfile.yaml`, validates it, authenticates with your API token, and waits for the deployment to finish. See the [AI-agent workflow](/guides/ai-agents) for the complete operating contract.
+The agent prepares the Stackfile, validates it, signs in with your API token, deploys the application, and returns the live URL. See [Deploy with a coding agent](/guides/ai-agents) for the copyable prompt.
 
 ## Choose where to run
 
@@ -46,7 +46,7 @@ Read [Stackdome Cloud during alpha](/get-started/cloud-alpha) for the current co
 
 <CardGroup cols={2}>
   <Card title="Understand the agent workflow" icon="bot" href="/guides/ai-agents">
-    Follow the commands, completion checks, and failure routes an agent uses.
+    Copy the Stackdome prompt into your coding agent.
   </Card>
   <Card title="Use the CLI directly" icon="terminal" href="/get-started/cli">
     Run the same deployment workflow one command at a time.
