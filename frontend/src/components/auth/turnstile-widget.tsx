@@ -143,12 +143,12 @@ export const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidget
     }, [siteKey, action, widgetTheme]);
 
     return (
-      /* Empty in the common case, so it reserves no height. empty:hidden keeps
-         the form's space-y-3 from adding a gap for a box with nothing in it;
-         py-2 only applies once Cloudflare paints a challenge plate. */
+      /* No height or padding of its own. On a silent pass Cloudflare's wrapper
+         measures 0px, so all this costs the form is one space-y-3 step. When a
+         challenge does paint, the plate sizes the box. */
       <div
         ref={containerRef}
-        className="cf-turnstile py-2 empty:hidden empty:p-0"
+        className="cf-turnstile"
         data-sitekey={siteKey}
         data-action={action}
       />
