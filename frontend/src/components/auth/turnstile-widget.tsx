@@ -4,6 +4,7 @@ import {
   useImperativeHandle,
   useRef,
 } from "react";
+import { useTheme } from "@/contexts/theme-provider";
 
 const turnstileScriptID = "cloudflare-turnstile-script";
 const turnstileScriptURL =
@@ -14,8 +15,8 @@ export interface TurnstileRenderOptions {
   action: string;
   /* Default is a fixed 300px, narrower than the form's fields. */
   size?: "normal" | "flexible" | "compact";
-  /* Default "auto" follows prefers-color-scheme. The app is light-only, so pin
-     it; pass the real theme through when dark mode ships. */
+  /* "auto" follows prefers-color-scheme, which is exactly what ThemeProvider's
+     "system" does, so the two agree without us resolving the media query. */
   theme?: "light" | "dark" | "auto";
   callback: (token: string) => void;
   "expired-callback": () => void;
@@ -86,6 +87,10 @@ export const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidget
   function TurnstileWidget({ siteKey, action, onToken, onUnavailable }, ref) {
     const containerRef = useRef<HTMLDivElement>(null);
     const widgetIDRef = useRef<string | null>(null);
+    /* ThemeProvider's "system" and Turnstile's "auto" both mean
+       prefers-color-scheme, so the names map straight across. */
+    const { theme } = useTheme();
+    const widgetTheme = theme === "system" ? "auto" : theme;
     const onTokenRef = useRef(onToken);
     const onUnavailableRef = useRef(onUnavailable);
 
@@ -112,7 +117,7 @@ export const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidget
             sitekey: siteKey,
             action,
             size: "flexible",
-            theme: "light",
+            theme: widgetTheme,
             callback: (token) => onTokenRef.current(token),
             "expired-callback": () => onTokenRef.current(""),
             "error-callback": () => {
@@ -132,7 +137,11 @@ export const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidget
           widgetIDRef.current = null;
         }
       };
-    }, [siteKey, action]);
+      /* widgetTheme is a dep because Turnstile has no setter for it: the only
+         way to repaint in the other theme is to remove and re-render. That
+         costs the visitor their token, so the challenge re-runs. Toggling the
+         theme mid-signup is rare and the re-run is usually invisible. */
+    }, [siteKey, action, widgetTheme]);
 
     return (
       /* min-h reserves the height so the submit button doesn't jump when the
