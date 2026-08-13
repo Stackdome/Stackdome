@@ -15,7 +15,6 @@ dev_env.yaml
 
 .superpowers/
 .worktrees/
-docs/superpowers/
 
 # Internal engineering notes (specs, plans, guides). Product docs live in docs/.
 dev-docs/
@@ -24,10 +23,10 @@ dev-docs/
 pkg/web/dist/*
 !pkg/web/dist/.gitkeep
 
-# Local secrets
-.env
-.env.local
-.env.*.local
+# Local secrets. Broad on purpose: backups like .env.old-key-jul15.bak were
+# committable under the old exact-name rules.
+.env*
+!.env.example
 
 # Local dev artifacts (Playwright session output, ad-hoc screenshots)
 .playwright-mcp/

@@ -5,7 +5,7 @@ description: Turn the current conversation context into a PRD and publish it to 
 
 ## Gate (superpowers spine)
 
-Precondition: an approved superpowers spec exists under `docs/superpowers/specs/` for this topic. If absent, REFUSE and tell the user to run `superpowers:brainstorming` first.
+Precondition: an approved superpowers spec exists under `dev-docs/specs/` for this topic. If absent, REFUSE and tell the user to run `superpowers:brainstorming` first.
 
 Synthesize the PRD FROM the spec — do not re-interview the user on requirements (brainstorming already did). Light confirmation of module decomposition / test scope is still allowed. Then publish to the issue tracker per `docs/agents/issue-tracker.md` conventions.
 

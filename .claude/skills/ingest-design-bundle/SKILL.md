@@ -93,7 +93,7 @@ Do **NOT** screenshot the bundle, open it in a browser, or render any component 
 Write exactly one file:
 
 ```
-docs/superpowers/design-refs/YYYY-MM-DD-<topic>-design-reference.md
+dev-docs/design-refs/YYYY-MM-DD-<topic>-design-reference.md
 ```
 
 (`<topic>` = short kebab slug from the design subject; `YYYY-MM-DD` = today.) It MUST contain:
