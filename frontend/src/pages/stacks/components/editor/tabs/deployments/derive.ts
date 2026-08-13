@@ -125,7 +125,7 @@ export interface FailingResource {
   name: string;
   type: ResourceFailureTypeValue;
   stage: FailureStage;
-  reason: string;
+  reason?: string;
   message?: string;
   exitCode?: number;
   restartCount?: number;
@@ -152,6 +152,17 @@ const FAILURE_TYPE_LABELS: Record<string, string> = {
 export function humanizeFailureType(failureType?: string): string {
   if (!failureType) return "Unknown";
   return FAILURE_TYPE_LABELS[failureType] ?? failureType;
+}
+
+/** Prefer structured failure fields over free-form container output. */
+export function failureDiagnosis(
+  failure: Partial<Pick<FailingResource, "failureType" | "reason">>,
+): string | undefined {
+  const failureType = failure.failureType?.trim() || undefined;
+  const reason = failure.reason?.trim() || undefined;
+  const label = failureType ? humanizeFailureType(failureType) : undefined;
+  if (label && reason) return `${label} (${reason})`;
+  return label ?? reason ?? undefined;
 }
 
 /** Pick the active detail block from a last_failure (build vs container vs init).
@@ -182,7 +193,7 @@ export function deriveFailingResources(_release: StackRelease, liveStatus?: Rele
       name,
       type: f.type ?? ResourceFailureType.Runtime,
       stage,
-      reason: detail?.reason ?? humanizeFailureType(detail?.failure_type),
+      reason: detail?.reason,
       message: detail?.message,
       exitCode: detail?.exit_code,
       restartCount: detail?.restart_count,
@@ -393,7 +404,7 @@ export function toneDotClass(t: Tone): string {
  * Console messages drop the resource name (it sits in its own column) and lead with
  * the verb; the detail after the first ": " is kept. Unknown types pass through.
  */
-export function compactEventMessage(e: ReleaseEvent): string {
+export function compactEventMessage(e: ReleaseEvent, failure?: FailingResource): string {
   const msg = e.message ?? "";
   const detail = (prefix: string) => {
     const i = msg.indexOf(": ");
@@ -403,7 +414,14 @@ export function compactEventMessage(e: ReleaseEvent): string {
     case ReleaseEventType.ResourceDeploying: return detail("Deploying");
     case ReleaseEventType.ResourceWaiting: return detail("Waiting");
     case ReleaseEventType.ResourceReady: return "Ready";
-    case ReleaseEventType.ResourceFailed: return detail("Failed to start");
+    case ReleaseEventType.ResourceFailed: {
+      const eventReason = e.metadata?.reason?.trim() || undefined;
+      const matchesCurrentFailure = failure && (!eventReason || eventReason === failure.reason);
+      const diagnosis = matchesCurrentFailure ? failureDiagnosis(failure) : eventReason;
+      if (!diagnosis) return detail("Failed to start");
+      const exit = matchesCurrentFailure && failure.exitCode != null ? `, exit ${failure.exitCode}` : "";
+      return `Failed to start — ${diagnosis}${exit}`;
+    }
     default: return msg;
   }
 }

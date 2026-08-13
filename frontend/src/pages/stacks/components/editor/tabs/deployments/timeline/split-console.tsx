@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { LogSnapshot } from "@/components/branded";
 import { fetchLogSnapshot } from "@/api/observability";
-import { BuildLogsLinkTarget, ReleaseEventLinkKind, type ReleaseEvent } from "@/api/releases";
+import { BuildLogsLinkTarget, ReleaseEventLinkKind, ReleaseEventType, type ReleaseEvent } from "@/api/releases";
 import type { FailingResource, ResourceSource } from "../derive";
-import { phaseTone, toneTextClass, toneDotClass, tonePillClass, ResourceFailureType, compactEventMessage } from "../derive";
+import { phaseTone, toneTextClass, toneDotClass, tonePillClass, ResourceFailureType, compactEventMessage, failureDiagnosis } from "../derive";
 import { BuildLogsModal } from "../build-logs-modal";
 
 export interface LogContext { orgId: string; projectName: string; stackId: string; }
@@ -49,11 +49,21 @@ export function SplitConsole({ rows, events, streaming, logContext }: SplitConso
   const [buildLogs, setBuildLogs] = useState<{ buildId: string; resourceName: string } | null>(null);
   if (rows.length === 0 && events.length === 0 && !streaming) return null;
 
+  const failuresByResource = new Map(rows.flatMap((row) => row.failure ? [[row.name, row.failure] as const] : []));
+  const latestFailureEventByResource = new Map<string, ReleaseEvent>();
+  for (const event of events) {
+    if (event.type === ReleaseEventType.ResourceFailed && event.resource_name) {
+      latestFailureEventByResource.set(event.resource_name, event);
+    }
+  }
   const selectedRow = rows.find((r) => r.name === selected);
   const visible = selectedRow ? events.filter((e) => e.resource_name === selectedRow.name) : events;
   const readyCount = rows.filter((r) => phaseTone(r.phase) === "ok").length;
   const failure = selectedRow?.failure;
-  const detailMsg = failure ? (failure.message ?? failure.reason) : selectedRow?.msg;
+  const diagnosis = failure ? failureDiagnosis(failure) : undefined;
+  const detailMsg = failure ? (diagnosis ?? failure.message) : selectedRow?.msg;
+  const capturedOutput = failure?.message?.trim();
+  const supportingLines = diagnosis && capturedOutput ? capturedOutput.split(/\r?\n/) : [];
   const isRuntimeCrash = failure?.type === ResourceFailureType.Runtime;
 
   return (
@@ -128,9 +138,15 @@ export function SplitConsole({ rows, events, streaming, logContext }: SplitConso
                 )}
               </div>
               {detailMsg && <div className={cn("mt-1.5 font-mono text-[11px] leading-relaxed", failure ? "text-danger" : "text-foreground")}>{detailMsg}</div>}
+              {supportingLines.length > 0 && (
+                <LogSnapshot
+                  lines={supportingLines}
+                  label={isRuntimeCrash ? "Termination output" : "Diagnostic output"}
+                />
+              )}
               {/* Crash-log snapshot is a one-shot follow=false read — the only log surface
                   that captures a crashing container's output (the Logs tab is live-only). */}
-              {logContext && isRuntimeCrash && failure && <CrashLog ctx={logContext} name={failure.name} />}
+              {logContext && isRuntimeCrash && failure && !capturedOutput && <CrashLog ctx={logContext} name={failure.name} />}
             </div>
           )}
 
@@ -140,6 +156,9 @@ export function SplitConsole({ rows, events, streaming, logContext }: SplitConso
             )}
             {visible.map((e) => {
               const lv = levelGlyph[e.level ?? DEFAULT_LEVEL] ?? levelGlyph[DEFAULT_LEVEL];
+              const eventFailure = e.resource_name && latestFailureEventByResource.get(e.resource_name) === e
+                ? failuresByResource.get(e.resource_name)
+                : undefined;
               return (
                 <div key={e.sequence} className="flex items-start gap-2.5 px-4 py-[5px] hover:bg-muted">
                   <span className="w-14 flex-none pt-0.5 font-mono text-[10.5px] tabular-nums text-fg-muted">
@@ -148,7 +167,7 @@ export function SplitConsole({ rows, events, streaming, logContext }: SplitConso
                   <span className={cn("w-3 flex-none text-center font-mono text-[11px]", lv.text)}>{lv.glyph}</span>
                   <span className="w-[90px] flex-none truncate pt-0.5 font-mono text-[10.5px] text-fg-muted">{e.resource_name || "release"}</span>
                   <span className="min-w-0 flex-1 break-words text-[12.5px] leading-[1.45] text-fg-2">
-                    {compactEventMessage(e)}
+                    {compactEventMessage(e, eventFailure)}
                     {(e.links ?? []).map((l, i) => {
                       const buildId = l.target?.[BuildLogsLinkTarget.BuildID];
                       return l.kind === ReleaseEventLinkKind.BuildLogs && buildId && logContext ? (

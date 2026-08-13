@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { deriveFailingResources, deriveRecovered, humanizeFailureType, causeLabel, formatDuration, formatReleaseTime, ResourceFailureType } from "../derive";
+import { deriveFailingResources, deriveRecovered, failureDiagnosis, humanizeFailureType, causeLabel, formatDuration, formatReleaseTime, ResourceFailureType } from "../derive";
 import { deriveStages, deriveReleaseTitle, releaseGitSha, phaseTone, toneTextClass, toneDotClass, stateTone, toneFromVariant, BUILD_READY_CONDITION, CONDITION_TRUE } from "../derive";
 import { deriveHeaderHealth, latestDeployFailed, stackSummariesStale, stripUnpinnedGitRevisions } from "../derive";
 import type { FailingResource, Stack, StackResource } from "../derive";
@@ -71,6 +71,30 @@ describe("deriveFailingResources", () => {
   it("returns nothing without a live status (not live or active)", () => {
     expect(deriveFailingResources(release({}))).toEqual([]);
   });
+
+  it("preserves absent structured fields so a captured message remains the fallback", () => {
+    const liveStatus = liveStatusWith({
+      worker: { state: "Error", last_failure: {
+        type: "runtime_crash", container: { message: "captured termination output" } } },
+    });
+    const [failure] = deriveFailingResources(release({}), liveStatus);
+
+    expect(failure).toMatchObject({ message: "captured termination output" });
+    expect(failure.reason).toBeUndefined();
+    expect(failure.failureType).toBeUndefined();
+    expect(failureDiagnosis(failure)).toBeUndefined();
+  });
+
+  it("preserves a failure type without synthesizing a duplicate reason", () => {
+    const liveStatus = liveStatusWith({
+      worker: { state: "Error", last_failure: {
+        type: "runtime_crash", container: { failure_type: "out_of_memory" } } },
+    });
+    const [failure] = deriveFailingResources(release({}), liveStatus);
+
+    expect(failure.reason).toBeUndefined();
+    expect(failureDiagnosis(failure)).toBe("Out of memory");
+  });
 });
 
 describe("deriveRecovered", () => {
@@ -109,6 +133,22 @@ describe("humanizeFailureType", () => {
   it("falls back to the raw value", () => {
     expect(humanizeFailureType("weird_thing")).toBe("weird_thing");
     expect(humanizeFailureType(undefined)).toBe("Unknown");
+  });
+});
+
+describe("failureDiagnosis", () => {
+  it.each([
+    ["out_of_memory", "OOMKilled", "Out of memory (OOMKilled)"],
+    ["image_pull_failed", "ImagePullBackOff", "Image pull failed (ImagePullBackOff)"],
+    ["create_container_error", "CreateContainerError", "Container create error (CreateContainerError)"],
+  ])("prioritizes human-readable failure type %s before Kubernetes reason %s", (failureType, reason, expected) => {
+    expect(failureDiagnosis({ failureType, reason })).toBe(expected);
+  });
+
+  it("uses whichever structured field is available and leaves message-only failures to the caller", () => {
+    expect(failureDiagnosis({ reason: "CrashLoopBackOff" })).toBe("CrashLoopBackOff");
+    expect(failureDiagnosis({ failureType: "out_of_memory", reason: "" })).toBe("Out of memory");
+    expect(failureDiagnosis({ reason: "" })).toBeUndefined();
   });
 });
 
