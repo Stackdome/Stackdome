@@ -14,9 +14,12 @@ interface AuthShellProps {
 // warm brand-tinted sky falling to the page ground — and the form sits in an
 // inset plate. The header is absolute chrome so the column centers on the
 // viewport, not on the leftover space under a flow header.
+// Global CSS clips body and #root (index.css: height 100vh, overflow hidden),
+// so the column scrolls in its own box. Sky and header stay outside that box,
+// or the horizon and the wordmark scroll away with the form.
 export function AuthShell({ title, sub, below, children }: AuthShellProps) {
   return (
-    <div className="relative flex min-h-svh flex-col overflow-hidden bg-background text-foreground">
+    <div className="relative h-full overflow-hidden bg-background text-foreground">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 h-[52svh] bg-gradient-to-b from-brand-bg to-transparent"
@@ -38,20 +41,22 @@ export function AuthShell({ title, sub, below, children }: AuthShellProps) {
         <ThemeToggle />
       </header>
 
-      <main className="relative z-[1] mx-auto flex w-full max-w-[428px] flex-1 flex-col px-6 py-20">
-        <div className="mt-auto text-center">
-          <h1 className="text-[26px] font-semibold leading-tight tracking-tight">{title}</h1>
-          {sub && <p className="mx-auto mt-2.5 text-sm leading-relaxed text-muted-foreground">{sub}</p>}
-        </div>
+      <div className="h-full overflow-y-auto overflow-x-hidden">
+        <main className="relative z-[1] mx-auto flex min-h-full w-full max-w-[428px] flex-col px-6 pb-10 pt-20">
+          <div className="mt-auto text-center">
+            <h1 className="text-[26px] font-semibold leading-tight tracking-tight">{title}</h1>
+            {sub && <p className="mx-auto mt-2.5 text-sm leading-relaxed text-muted-foreground">{sub}</p>}
+          </div>
 
-        {/* Pill controls inside a stadium plate — the plate is rounded like its contents. */}
-        <div className="mt-8 rounded-[36px] border border-border bg-card p-6 [&_button]:rounded-full [&_input]:rounded-full [&_input]:pl-4">
-          {children}
-        </div>
+          {/* Pill controls inside a stadium plate — the plate is rounded like its contents. */}
+          <div className="mt-8 rounded-[36px] border border-border bg-card p-6 [&_button]:rounded-full [&_input]:rounded-full [&_input]:pl-4">
+            {children}
+          </div>
 
-        {below && <div className="mt-6 text-center text-sm text-muted-foreground">{below}</div>}
-        <div className="mb-auto" aria-hidden="true" />
-      </main>
+          {below && <div className="mt-6 text-center text-sm text-muted-foreground">{below}</div>}
+          <div className="mb-auto" aria-hidden="true" />
+        </main>
+      </div>
     </div>
   );
 }
