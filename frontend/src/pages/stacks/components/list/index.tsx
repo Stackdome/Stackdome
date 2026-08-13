@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getStacksByOrg, deleteStack } from "@/api/stacks";
-import { getOrganization } from "@/api/organizations";
 import { buildHelloStackSeed } from "@/pages/stacks/lib/onboarding/hello-stack-seed";
 import { startCanvasStage, isTourDone, markTourDone } from "@/pages/stacks/lib/onboarding/tour";
 import { WelcomeDialog } from "@/pages/stacks/components/onboarding/welcome-dialog";
@@ -87,25 +86,23 @@ export default function StacksPage() {
     }
   }, [setStacks]);
 
-  // The demo exposes a public port, so an org without a domain cannot finish
-  // the tour.
+  // The demo exposes a public port, and the org's own domain list has no
+  // bearing on whether that is allowed: the backend waives the requirement
+  // whenever a platform base domain is configured. Cloud configures one and
+  // adds the domain internally, so a Cloud org's list is empty by design.
+  //
+  // A self-hosted install with neither a base domain nor an org domain is the
+  // one case left where the tour is offered and Deploy then fails validation
+  // with "organisation has no domain configured". Gating that needs the base
+  // domain exposed on /api/v1/config, which the frontend cannot see today.
   const navigate = useNavigate();
   const tourOffered = useRef(false);
   const [welcomeOpen, setWelcomeOpen] = useState(false);
   useEffect(() => {
     if (isLoading || error || stacks.length > 0 || tourOffered.current) return;
     if (!canWriteAnyProject || isTourDone()) return;
-    const orgId = getCurrentOrganizationId();
-    if (!orgId) return;
     tourOffered.current = true;
-    getOrganization(orgId)
-      .then((org) => {
-        if ((org.domains ?? []).length === 0) return;
-        setWelcomeOpen(true);
-      })
-      .catch(() => {
-        // No tour on a failed lookup — the normal empty state still shows.
-      });
+    setWelcomeOpen(true);
   }, [isLoading, error, stacks, canWriteAnyProject]);
 
   const acceptTour = () => {
