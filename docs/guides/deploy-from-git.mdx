@@ -6,146 +6,23 @@ keywords: ["deploy from git", "repository deployment", "Dockerfile build", "priv
 
 ## Outcome
 
-Deploy the public [Stackdome demo repository](https://github.com/Stackdome/stackdome-demo) as a three-resource stack. Stackdome builds its web application and worker from separate repository contexts, runs Redis from a published image, provisions persistent Redis storage, and waits until the release is healthy. When deployment finishes, open the web resource's public URL to view the app.
+Connect a Git provider, choose a repository, and let Stackdome build it into a running service.
 
 ## Prerequisites
 
-- A local clone of `https://github.com/Stackdome/stackdome-demo.git`. The example application is under `hello-stack`.
-- The URL of Stackdome Cloud or a self-hosted installation, plus an API token. See [authentication and API tokens](/reference/authentication).
-- Stackdome Cloud is ready for Git builds. On self-hosted Stackdome, Git builds require [connected compute](/self-host/connect-compute).
-- For a private repository, a Git integration that can access it. Stackdome automatically uses an existing matching integration.
-- For the GitHub App flow on a self-hosted installation, an externally reachable `SERVER_EXTERNAL_URL` and a GitHub account allowed to install the app for the repository owner.
+- A repository with a Dockerfile.
+- Access to the Stackdome dashboard.
+- For a private repository, a Git integration that can access it.
+- On self-hosted Stackdome, [connected compute](/self-host/connect-compute) and GitHub platform settings completed by an administrator.
 
-## Agent prompt
+## Use the CLI
 
-```text
-Clone https://github.com/Stackdome/stackdome-demo.git and deploy its hello-stack application to Stackdome. Use the repository's Compose file as an architectural reference for creating the Stackfile, and cross-check it against the Dockerfiles and README. Run stackdome init beside hello-stack/docker-compose.yml only as experimental scaffolding, replace local build paths with the repository URL and repository-root contexts, validate every edit, authenticate only with an API token, deploy with stackdome deploy --wait -o json, retain the returned release ID, verify that the converged release ID matches it and converged health is ok, and return the web URL.
-```
-
-## Agent actions
-
-<Steps>
-  <Step title="Inspect the repository">
-    Use `hello-stack/docker-compose.yml` as the topology reference, then cross-check `hello-stack/README.md` and both Dockerfiles. Create one Stackfile resource for each service and carry over only behavior supported by the Stackfile schema. The repository declares `web` on port `3000`, a stateless `worker`, Redis on port `6379`, and persistent Redis data under `/data`.
-  </Step>
-  <Step title="Initialize the Stackfile">
-    Run `stackdome init --name hello-stack` from the repository's `hello-stack` directory. Its experimental converter creates a draft from `docker-compose.yml` and warns that the two local builds need a git repository. Treat the Compose file—not the generated draft—as the source of architectural hints.
-  </Step>
-  <Step title="Set the git build source">
-    Set both build resources to `https://github.com/Stackdome/stackdome-demo.git` on `main`. Use `hello-stack/web` for the web context and `hello-stack/worker` for the worker context because build paths are resolved from the cloned repository root.
-  </Step>
-  <Step title="Validate and authenticate">
-    Run `stackdome validate`, then authenticate with `stackdome login --url https://<your-stackdome-host> --token <api-token>` and confirm the active scope with `stackdome whoami -o json`.
-  </Step>
-  <Step title="Deploy and verify">
-    Run `stackdome deploy --wait -o json`, retain its non-empty `release.id` as the deployed release ID, then run `stackdome status -o json`. For a public service, run `stackdome open -o json` and return an entry from `urls`.
-  </Step>
-</Steps>
-
-Pushing a commit does not deploy an ordinary stack automatically. Run the deploy command again to build the current branch, tag, or commit. Preview environments are the exception described in [preview environments](/guides/preview-environments).
-
-## Success criteria
-
-- `stackdome validate` exits successfully for the generated `stackfile.yaml`.
-- `stackdome deploy --wait -o json` exits successfully, returns a non-empty `release.id` that is retained as the deployed release ID, and returns `release.state` as `Released`.
-- `stackdome status -o json` returns `stack.converged_release.id` equal to the deployed release ID, `stack.converged_release.state` as `Released`, and `stack.converged_release.health` as `ok`.
-- A public service returns at least one entry in the `urls` array from `stackdome open -o json`.
-- The Stackfile records both demo build contexts, web port `3000`, Redis port `6379`, Redis dependencies, and the persistent `/data` mount found in the repository.
-
-## CLI workflow
-
-Clone the demo and run the initializer beside its Compose file:
-
-```bash
-git clone https://github.com/Stackdome/stackdome-demo.git
-cd stackdome-demo/hello-stack
-stackdome init --name hello-stack
-```
-
-The initializer discovers all three services and the Redis volume. It cannot turn local Compose build paths into a remote source automatically, so complete the generated file with the repository URL and repository-root contexts:
-
-<Warning>
-  Docker Compose conversion is experimental. Use Compose to understand the application and create the Stackfile; a converted Stackfile is only a draft and usually needs manual work for build-based services. Compose paths such as `./web` are relative to the local Compose file; Stackdome needs a Git repository URL and a context relative to the root of the cloned repository. Review every converted resource and require `stackdome validate` to pass before deployment.
-</Warning>
-
-```yaml
-name: hello-stack
-
-resources:
-  web:
-    build:
-      repo: https://github.com/Stackdome/stackdome-demo.git
-      branch: main
-      context: hello-stack/web
-    ports:
-      - name: http
-        port: 3000
-        protocol: HTTP
-        public: true
-    env:
-      CELEBRATION: confetti
-      HAT: party
-      HEADLINE: Your stack is now live.
-      PUBLIC_URL: "{{ self.public_url }}"
-      REDIS_URL: "redis://{{ redis.host }}:6379"
-    depends_on:
-      - redis
-
-  worker:
-    build:
-      repo: https://github.com/Stackdome/stackdome-demo.git
-      branch: main
-      context: hello-stack/worker
-    env:
-      CELEBRATION: confetti
-      REDIS_URL: "redis://{{ redis.host }}:6379"
-    depends_on:
-      - redis
-
-  redis:
-    image: redis:7-alpine
-    command:
-      - redis-server
-      - --appendonly
-      - "yes"
-    ports:
-      - name: redis
-        port: 6379
-        protocol: TCP
-        public: false
-    volumes:
-      - name: redis
-        path: /data
-    workload_type: StatefulService
-
-volumes:
-  redis:
-    size: 1Gi
-    access_mode: ReadWriteOnce
-```
-
-The two build contexts are relative to the repository root, not to the directory where you ran the CLI. `{{ redis.host }}` creates the resource connection and supplies the destination hostname to both Node.js processes. Omit `branch` and `tag` to let the server resolve the repository's default branch. To pin a commit, set `commit` together with the branch or tag from which Stackdome can fetch it. See the [Stackfile guide](/guides/stackfile) for the Compose conversion details and the [Stackfile reference](/reference/stackfile) for every field.
-
-Validate before authentication or deployment:
-
-```bash
-stackdome validate
-stackdome login --url https://<your-stackdome-host> --token <api-token>
-stackdome whoami -o json
-stackdome deploy --wait -o json
-stackdome status -o json
-stackdome open -o json
-```
-
-<Note>
-  For a private repository, the organization must have a Git integration that can access it. Stackdome automatically uses an existing matching integration. If none exists, or the GitHub App installation does not cover the repository, configure one through the dashboard or the documented API using `stackdome api`. The CLI currently has no purpose-built Git integration commands. Do not put provider tokens in `stackfile.yaml`.
-</Note>
-
-<Visibility for="humans">
+For terminal, coding-agent, or CI steps, use [Deploy from Git with the CLI](/reference/cli-workflows#deploy-from-git).
 
 ## Dashboard workflow
 
-Use the dashboard when you need to connect a provider or prefer the visual stack editor. For a complete first-deploy walkthrough, see [Deploy using the dashboard](/deploy-first-app).
+
+Use the dashboard to connect a provider and choose a repository. For a complete first-deploy walkthrough, see [Deploy using the dashboard](/deploy-first-app).
 
 ### Connect a provider
 
@@ -326,7 +203,6 @@ So a commit to the branch a resource tracks changes nothing on its own. The next
 
 Every webhook delivery is HMAC-verified against that provider's webhook secret before anything happens, and a bad signature is refused.
 
-</Visibility>
 
 ## Troubleshooting
 
@@ -336,14 +212,12 @@ Start with structured CLI output. Use the release ID returned by `stackdome depl
 stackdome list builds
 stackdome describe build <build-id>
 stackdome logs build <build-id>
-stackdome list release-events <release-id> --follow
+stackdome list release-events <release-id> -o json
 stackdome status -o json
 stackdome logs <resource> --tail 100
 ```
 
 Check the build definition before retrying: a private repository needs a configured provider, the selected revision must exist, and `dockerfile` is relative to `context`. A failed `stackdome deploy --wait -o json` is not a successful deployment even if the stack document was applied.
-
-<Visibility for="humans">
 
 **Build progress and failures are release events.** Open the stack's **Deployments** tab and read the activity stream for the release. The wording is predictable:
 
@@ -362,7 +236,7 @@ Common causes, in the order worth checking:
 - **The provider lost access.** Check the row on **Git Providers**. **Needs attention** means no stored credentials. **Needs setup** means an app that was never installed. For a GitHub App, an installation that was removed or suspended on GitHub shows up as a token-minting failure on the build rather than on the row — **Check again** or **Manage on GitHub** will tell you which installations are actually live.
 - **The revision does not exist.** A **Branch name**, **Tag name** or **Commit hash** that was renamed, deleted or force-pushed away fails at clone time.
 - **No `Dockerfile` where the build looked.** **Dockerfile path** is relative to **Build context**, not to the repository root. In a monorepo, get the context right first.
-- **Self-hosted compute has no registry.** The build has nowhere to push. See [Connect compute](/self-host/connect-compute).
+- **Self-hosted compute is not ready.** Ask the administrator to check [connected compute](/self-host/connect-compute).
 
 <Warning>
 **Builds are not capped.** Stackdome does not limit how many builds run at once — every resource that needs one gets one, immediately. Image builds are CPU-hungry, so on a single-node cluster a handful of simultaneous builds can saturate the node and push every one of them toward its timeout, including builds for stacks you were not touching. Stagger large deploys.
@@ -370,7 +244,6 @@ Common causes, in the order worth checking:
 Do not confuse this with the limit that does exist. [Preview environments](/guides/preview-environments) cap how many previews may be **active at one time**, and a pull request that would exceed it is skipped rather than queued. That bounds how many previews you accumulate; it does not bound how many builds run concurrently, and nothing bounds the builds your own deploys start.
 </Warning>
 
-</Visibility>
 
 ## Related tasks
 

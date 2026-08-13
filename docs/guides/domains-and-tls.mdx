@@ -5,102 +5,36 @@ description: "Configure your organization domain and understand the hostnames St
 
 ## Outcome
 
-Expose an application at a Stackdome-generated public URL and verify that the current release is healthy and reachable. On a TLS-eligible organization domain, the URL completes a trusted HTTPS handshake.
+Expose an application at a Stackdome-generated public URL with HTTPS.
 
 ## Prerequisites
 
-- A resource with an HTTP port and evidence of the port the application actually listens on.
-- The URL of Stackdome Cloud or a self-hosted installation, plus an API token. See [authentication and API tokens](/reference/authentication).
-- An organization domain already configured. Organization-domain management is currently dashboard/API-only; the public CLI has no domain command.
-- For self-hosted Stackdome, DNS for the organization domain and wildcard application hostnames must point at the installation before HTTPS can be issued.
+- A resource with an HTTP port.
+- On Stackdome Cloud, no domain setup is needed.
+- On self-hosted Stackdome, an organization domain and wildcard DNS that point to the installation.
 
-## Agent prompt
+## Use the CLI
 
-```text
-Expose this service at a public Stackdome URL. Confirm the application port from repository or image evidence, mark that port public in stackfile.yaml, validate and deploy the change, return the URL, and verify release health and HTTPS when the organization domain is TLS-eligible. If the organization has no domain, stop and identify the dashboard-only domain setup step instead of inventing a CLI command.
-```
-
-## Agent actions
-
-<Steps>
-  <Step title="Confirm the listening port">
-    Inspect the application and container configuration. Use the container's destination port, not a local development host-port mapping.
-  </Step>
-  <Step title="Confirm the domain boundary">
-    Open **Platform → Domains** to confirm the organization domain when it is not already known. The current CLI cannot add, list, or remove organization domains.
-  </Step>
-  <Step title="Expose the port">
-    Set the port's `protocol` to `HTTP` and `public` to `true` in `stackfile.yaml`. Omit `subdomain` to let Stackdome generate the prefix, or set it only when the user requested a stable custom prefix and the installed validator accepts it.
-  </Step>
-  <Step title="Validate and deploy">
-    Run `stackdome validate`, confirm scope with `stackdome whoami -o json`, then run `stackdome deploy --wait -o json`, retain its non-empty `release.id` as the deployed release ID, and run `stackdome status -o json`.
-  </Step>
-  <Step title="Return and test the URL">
-    Run `stackdome open -o json`, select an entry from `urls`, and test it. Run `stackdome status --conditions`; for a TLS-eligible hostname, require the resource condition `TLSConfigured` to be `True` with reason `TLSReady`.
-  </Step>
-</Steps>
-
-## Success criteria
-
-- `stackdome validate` exits successfully with an HTTP port whose `public` field is `true`.
-- `stackdome deploy --wait -o json` exits successfully, returns a non-empty `release.id` that is retained as the deployed release ID, and returns `release.state` as `Released`.
-- `stackdome status -o json` returns `stack.converged_release.id` equal to the deployed release ID, `stack.converged_release.state` as `Released`, and `stack.converged_release.health` as `ok`.
-- `stackdome open -o json` returns at least one entry in `urls` for the public resource.
-- For a TLS-eligible hostname, `stackdome status --conditions` reports `TLSConfigured=True` with reason `TLSReady` for the resource.
-- `curl --head --max-time 15 <url>` reaches the application without `--insecure`.
-
-## CLI and Stackfile workflow
-
-Organization domains themselves are dashboard/API-only. The supported CLI/Stackfile path begins after the domain is configured: declare the public port, deploy it, and retrieve the URL.
-
-```yaml
-resources:
-  web:
-    image: ghcr.io/acme/storefront-web:1.4.0
-    ports:
-      - name: http
-        port: 8080
-        protocol: HTTP
-        public: true
-```
-
-```bash
-stackdome validate
-stackdome whoami -o json
-stackdome deploy --wait -o json
-stackdome status -o json
-stackdome status --conditions
-stackdome open -o json
-curl --head --max-time 15 https://<generated-hostname>
-```
-
-Do not construct the generated hostname yourself. Use the current value from `stackdome open -o json`, because changing the resource name, port, or organization domain can change the URL.
-
-<Visibility for="agents">
-  - Exact Stackfile fields: `resources.<resource>.ports[]` requires `name` and `port`; set `protocol: HTTP` and `public: true`. `subdomain` is optional.
-  - Retain `release.id` as the deployed release ID. Require a successful deploy exit, `release.state == "Released"`, `stack.converged_release.id` equal to that ID, `stack.converged_release.state == "Released"`, `stack.converged_release.health == "ok"`, and at least one `urls` entry before returning a public endpoint.
-  - TLS verification: use the human-readable `stackdome status --conditions` view and require `TLSConfigured=True` with reason `TLSReady`. The current CLI does not include condition history in JSON or YAML output; do not claim this check is machine-readable until that CLI limitation is fixed.
-  - Recovery: rerun `stackdome open -o json`, resolve the returned host with `dig +short <hostname>`, and use `stackdome status --conditions` plus `stackdome list release-events <release-id> --follow` for deployment or TLS failures.
-  - There is no supported public CLI command for adding or removing domains or configuring DNS. Do not guess one.
-</Visibility>
-
-<Visibility for="humans">
+For terminal, coding-agent, or CI steps, use [Expose a service with the CLI](/reference/cli-workflows#domains-and-tls).
 
 ## Dashboard workflow
 
-Your organization has one **domain**, and every hostname Stackdome hands out sits underneath it. You do not name those hostnames — Stackdome derives them from the **stack**, the **resource**, and the **port**. This page covers where the domain comes from, the DNS you have to create for it, and the exact shape of a generated hostname.
+
+Stackdome Cloud supplies the domain, DNS, and TLS. Mark a resource port public, deploy it, and use the URL shown on the stack.
+
+On self-hosted Stackdome, your administrator supplies the organization domain and wildcard DNS. The rest of this page explains that setup and how Stackdome creates hostnames.
 
 ### Dashboard prerequisites
 
 - **Access to the Stackdome dashboard.** During alpha, every signup owns one organization and uses its default project, so there is no role or project-selection step.
-- **A domain whose DNS you control.** You will be creating records on it. If you only want to try Stackdome, you do not need one — see [Install Stackdome](/self-host/install) for the `nip.io` path.
-- **A domain already configured**, if you are only reading the hostname rules. The installer puts one on the organization for you.
+- **For self-hosted Stackdome, a domain whose DNS you control.** The installer can also use a `nip.io` trial domain.
+- **For Stackdome Cloud, no domain work is required.** Skip to [Generated hostnames](#generated-hostnames).
 
-## The organization domain
+## Self-hosted organization domain
 
 The domain is a property of the organization, not of a stack or a **cluster**. There is one, and generated hostnames are built under it.
 
-The installer sets the first one. Whatever you passed to `--domain` — or the `stackdome.<PUBLIC_IP>.nip.io` it picked for you — is written onto the organization named **Default** during install. So on a fresh install there is nothing to do here.
+The installer sets the first domain. It uses the value passed to `--domain`, or a `stackdome.<PUBLIC_IP>.nip.io` trial domain. A new self-hosted installation normally needs no extra dashboard step.
 
 To see it, open **Domains** under **PLATFORM** in the sidebar, at `/domains`.
 
@@ -207,7 +141,7 @@ stackdome status --conditions
 
 For a TLS-eligible public hostname, the resource condition `TLSConfigured` must be `True` with reason `TLSReady`. This is Stackdome's certificate-readiness signal; you do not need to inspect certificate-management resources directly.
 
-The current CLI shows condition history only in the human-readable table. `stackdome status --conditions -o json` returns the ordinary structured Stack object, so keep this verification separate from JSON status checks until structured condition output is implemented.
+Structured status includes resource conditions under `live_status.resources.<resource>.conditions`. The `--conditions` flag expands the human-readable table; it does not change the JSON object.
 
 Hostnames ending in `.nip.io`, `.sslip.io`, `.local`, or `.localhost` are non-TLS trial names and do not receive a certificate.
 
@@ -223,7 +157,6 @@ Hostnames ending in `.nip.io`, `.sslip.io`, `.local`, or `.localhost` are non-TL
 
 **HTTPS breaks after you change the organization domain.** Generated hostnames are rebuilt from the organization's domain, so changing it changes every hostname the next time a resource is saved. Update DNS for the new domain, and expect fresh certificates to be requested for the new names.
 
-</Visibility>
 
 <Card title="Stacks and resources" icon="cube" href="/concepts/stacks-and-resources">
   What a port is, and the difference between a public and an internal one.

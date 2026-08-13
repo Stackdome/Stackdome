@@ -5,95 +5,25 @@ description: "Run an existing container image, including images from private reg
 
 ## Outcome
 
-Deploy an existing container image as a Stackdome resource and wait until the release is healthy. This path pulls an image that was built elsewhere; it does not clone a repository or run an image build. A public port produces a URL you can return to the user.
+Run an existing container image as a Stackdome resource. Mark an HTTP port public when the service needs a URL.
 
 ## Prerequisites
 
-- The image reference, including its registry host and a tag or digest. Prefer a digest when the deployed bits must not drift.
-- Evidence about the container's listening ports, command, environment requirements, dependencies, and storage paths.
-- The URL of Stackdome Cloud or a self-hosted installation, plus an API token. See [authentication and API tokens](/reference/authentication).
-- A registry reachable from both the Stackdome hub, which probes the image before release, and the deployment destination, which performs the pull.
-- For a private image, a registry credential already configured through the dashboard or API. The current public CLI cannot create, update, or verify registry credentials.
+- The full image reference, including a tag or digest.
+- The port and command used by the container.
+- Any required environment variables, dependencies, and storage paths.
+- For a private image, credentials for its external registry.
 
 If you need a managed Postgres database, use [Postgres](/guides/postgres) instead of running `postgres:16` as an ordinary resource.
 
-## Agent prompt
+## Use the CLI
 
-```text
-Deploy this container image to Stackdome: <image-reference>. Use the supplied requirements and repository evidence for its command, ports, environment, dependencies, and storage. Run stackdome init before editing stackfile.yaml, set the generated resource's image reference, validate every edit, authenticate only with an API token, deploy with stackdome deploy --wait -o json, retain the returned release ID, verify that the converged release ID matches it and converged health is ok, and return the public URL. If the image is private and no registry credential is configured, stop and tell me that credential setup currently requires the Stackdome dashboard or API.
-```
-
-## Agent actions
-
-<Steps>
-  <Step title="Inspect the runtime requirements">
-    Confirm the exact image reference, listening ports, command, environment values, dependencies, and storage. Do not assume that a container exposes a public HTTP port.
-  </Step>
-  <Step title="Initialize the Stackfile">
-    Run `stackdome init` before editing. It creates `stackfile.yaml` or converts a supported Compose file in the current directory.
-  </Step>
-  <Step title="Set the image source">
-    Edit the generated resource so `image` contains the full reference. Remove any `build` key from that resource because a resource accepts exactly one source. Add only the ports and runtime configuration supported by evidence.
-  </Step>
-  <Step title="Validate and authenticate">
-    Run `stackdome validate`, then authenticate with `stackdome login --url https://<your-stackdome-host> --token <api-token>` and confirm the active scope with `stackdome whoami -o json`.
-  </Step>
-  <Step title="Deploy and verify">
-    Run `stackdome deploy --wait -o json`, retain its non-empty `release.id` as the deployed release ID, then run `stackdome status -o json`. For a public service, run `stackdome open -o json` and return an entry from `urls`.
-  </Step>
-</Steps>
-
-## Success criteria
-
-- `stackdome validate` exits successfully for the generated `stackfile.yaml`.
-- `stackdome deploy --wait -o json` exits successfully, returns a non-empty `release.id` that is retained as the deployed release ID, and returns `release.state` as `Released`.
-- `stackdome status -o json` returns `stack.converged_release.id` equal to the deployed release ID, `stack.converged_release.state` as `Released`, and `stack.converged_release.health` as `ok`.
-- A public service returns at least one entry in the `urls` array from `stackdome open -o json`.
-- No registry password or token appears in the Stackfile, shell history captured for support, screenshots, tickets, or chat messages.
-
-## CLI workflow
-
-Initialize from the working directory, then edit the generated file:
-
-```bash
-stackdome init
-```
-
-Replace the generated resource with an image-backed definition based on the container's requirements:
-
-```yaml
-name: postgrest
-
-resources:
-  api:
-    image: postgrest/postgrest:v12.2.0
-    ports:
-      - name: http
-        port: 3000
-        protocol: HTTP
-        public: true
-```
-
-Use a fully qualified reference such as `ghcr.io/acme/api:1.4.2` for another registry. A resource must contain exactly one of `image` or `build`. See the [Stackfile reference](/reference/stackfile) for runtime fields and current release gaps.
-
-Validate, authenticate, deploy, and inspect the terminal state:
-
-```bash
-stackdome validate
-stackdome login --url https://<your-stackdome-host> --token <api-token>
-stackdome whoami -o json
-stackdome deploy --wait -o json
-stackdome status -o json
-stackdome open -o json
-```
-
-For a private image, configure its registry credential through the dashboard or API first. The public CLI has no image-registry management command, and the Stackfile has no field for registry passwords or tokens.
-
-<Visibility for="humans">
+For terminal, coding-agent, or CI steps, use [Deploy an image with the CLI](/reference/cli-workflows#deploy-an-image).
 
 ## Dashboard workflow
 
-Use the dashboard when you need to configure private-registry credentials or prefer the visual stack editor. For a complete first-deploy walkthrough, see [Deploy using the dashboard](/deploy-first-app).
+
+Use the dashboard to choose an image and configure private-registry credentials. For a complete first-deploy walkthrough, see [Deploy using the dashboard](/deploy-first-app).
 
 ### Set an image source
 
@@ -250,7 +180,6 @@ Consequences worth knowing:
 
 Just before the stack is applied, the hub writes the resolved credential into the target cluster's namespace as a pull secret, so the cluster can pull without ever being handed your organization's credential store.
 
-</Visibility>
 
 ## Troubleshooting
 
