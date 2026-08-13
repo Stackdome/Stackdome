@@ -43,7 +43,7 @@ Build system is **Mage** (`magefile.go`, namespaced targets); `Makefile` wraps s
 Notes:
 - `mage dev:setup` is idempotent; reads/writes `.env` (creates from `.env_template`), writes cluster creds to `dev_env.yaml`.
 - `mage build` skips `tsc -b` so unrelated frontend type errors don't block the binary; frontend's own `pnpm build` does run `tsc -b`.
-- Integration tests need `TEST_KUBECONFIG` pointing at a Mage-created Kind cluster (`mage cluster:create` / `cluster:delete`); state cached in `~/.cache/stackdome-api-server/clusters/`.
+- Integration tests need `TEST_KUBECONFIG` pointing at a Mage-created Kind cluster (`mage cluster:setup` / `cluster:delete`); state cached in `~/.cache/stackdome-api-server/clusters/`.
 - New DB migration: scaffold with `hack/create_migration.sh`; ordered files live in `pkg/db/migrations/`.
 - Full end-to-end demo env: `hack/run_local.sh [stack.json]`.
 - **Tests use Ginkgo.** All Go tests are written with Ginkgo v2 + Gomega (`Describe`/`It`/`Expect`), never bare `testing.T` test functions. Ginkgo allows exactly one `RunSpecs` per package — if a suite bootstrap (`*_suite_test.go` or any `RunSpecs` call) already exists, add `var _ = Describe(...)` blocks to new files instead of a second suite. Existing bare-`testing.T` tests may stay, but new tests never add to them.

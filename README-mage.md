@@ -62,7 +62,7 @@ mage dev:teardown
 
 ### Cluster Management
 
-- `mage cluster:create` - Create a test cluster with all operators
+- `mage cluster:setup` - Create a test cluster with all operators
 - `mage cluster:delete` - Delete the test cluster
 - `mage cluster:status` - Show test cluster status
 - `mage cluster:kubeconfig` - Print the kubeconfig path
@@ -93,8 +93,8 @@ mage cluster:delete
 ```
 
 **Automatic Dependency Management:**
-- `mage test:integration` automatically calls `mage cluster:create`
-- `mage cluster:create` automatically calls `mage deps:install`
+- `mage test:integration` automatically calls `mage cluster:setup`
+- `mage cluster:setup` automatically calls `mage deps:install`
 - No need to manually run dependency steps
 
 ### Environment Variables
@@ -111,7 +111,7 @@ mage cluster:delete
 
 ### How It Works
 
-1. **Pre-created Cluster**: `mage cluster:create` creates a Kind cluster with all operators installed
+1. **Pre-created Cluster**: `mage cluster:setup` creates a Kind cluster with all operators installed
 2. **State Management**: Cluster state is cached in `~/.cache/stackdome-api-server/clusters/`
 3. **Test Integration**: Tests require `TEST_KUBECONFIG` environment variable pointing to the Mage cluster
 4. **Lifecycle Control**: Cluster persists across test runs until explicitly deleted
@@ -140,7 +140,7 @@ mage cluster:delete  # cleanup after tests
 ```
 
 The dependency chain ensures:
-1. `test:integration` → `cluster:create` → `deps:install`
+1. `test:integration` → `cluster:setup` → `deps:install`
 2. All dependencies are resolved automatically
 3. No manual setup steps required
 
@@ -177,7 +177,7 @@ kubectl get pods -A
 mage cluster:delete
 mage deps:clean
 mage deps:install
-mage cluster:create
+mage cluster:setup
 ```
 
 ### Tests Can't Find Cluster

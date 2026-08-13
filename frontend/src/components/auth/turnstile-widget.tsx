@@ -143,9 +143,9 @@ export const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidget
     }, [siteKey, action, widgetTheme]);
 
     return (
-      /* No reserved height: on a silent pass Cloudflare leaves a 0px wrapper
-         here, so the form's space-y-3 is the only gap. When a challenge does
-         paint, the plate sizes the box itself. */
+      /* No height or padding of its own. On a silent pass Cloudflare's wrapper
+         measures 0px, so all this costs the form is one space-y-3 step. When a
+         challenge does paint, the plate sizes the box. */
       <div
         ref={containerRef}
         className="cf-turnstile"
