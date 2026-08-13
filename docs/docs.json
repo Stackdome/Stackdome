@@ -35,7 +35,13 @@
         "groups": [
           {
             "group": "Get started",
-            "pages": ["index", "quickstart", "get-started/cli", "get-started/cloud-alpha"]
+            "pages": [
+              "index",
+              "quickstart",
+              "concepts/stacks-and-resources",
+              "get-started/cli",
+              "get-started/cloud-alpha"
+            ]
           },
           {
             "group": "Build and ship",
@@ -66,8 +72,7 @@
             "pages": [
               "quickstarts/n8n-postgres",
               "quickstarts/git-build-mysql",
-              "deploy-first-app",
-              "concepts/stacks-and-resources"
+              "deploy-first-app"
             ]
           }
         ]
