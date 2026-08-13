@@ -16,6 +16,8 @@ export interface TurnstileRenderOptions {
   /* Default is a fixed 300px, narrower than the form's fields. */
   size?: "normal" | "flexible" | "compact";
   theme?: "light" | "dark" | "auto";
+  /* interaction-only: nothing paints unless Cloudflare needs a challenge. */
+  appearance?: "always" | "execute" | "interaction-only";
   callback: (token: string) => void;
   "expired-callback": () => void;
   "error-callback": () => void;
@@ -116,6 +118,7 @@ export const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidget
             action,
             size: "flexible",
             theme: widgetTheme,
+            appearance: "interaction-only",
             callback: (token) => onTokenRef.current(token),
             "expired-callback": () => onTokenRef.current(""),
             "error-callback": () => {
@@ -140,14 +143,12 @@ export const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidget
     }, [siteKey, action, widgetTheme]);
 
     return (
-      /* min-h reserves the height so the submit button doesn't jump when the
-         widget paints. Padding, not margin: the form's space-y-3 owns the
-         margins, so py-2 stacks to 20px of air here against the fields' 12px.
-         That air is the only separation available, since Cloudflare renders the
-         plate itself out of reach of our stylesheets. */
+      /* Empty in the common case, so it reserves no height. empty:hidden keeps
+         the form's space-y-3 from adding a gap for a box with nothing in it;
+         py-2 only applies once Cloudflare paints a challenge plate. */
       <div
         ref={containerRef}
-        className="cf-turnstile min-h-[65px] py-2"
+        className="cf-turnstile py-2 empty:hidden empty:p-0"
         data-sitekey={siteKey}
         data-action={action}
       />

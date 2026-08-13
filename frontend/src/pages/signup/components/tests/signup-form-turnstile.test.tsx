@@ -92,6 +92,7 @@ describe("SignupForm Turnstile integration", () => {
     });
     expect(renderOptions?.sitekey).toBe("public-site-key");
     expect(renderOptions?.action).toBe("turnstile-spin-v2");
+    expect(renderOptions?.appearance).toBe("interaction-only");
   });
 
   it("resets the widget after the signup request fails", async () => {
