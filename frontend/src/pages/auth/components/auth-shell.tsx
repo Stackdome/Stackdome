@@ -41,7 +41,7 @@ export function AuthShell({ title, sub, below, children }: AuthShellProps) {
         <ThemeToggle />
       </header>
 
-      <div className="h-full overflow-y-auto">
+      <div className="h-full overflow-y-auto overflow-x-hidden">
         <main className="relative z-[1] mx-auto flex min-h-full w-full max-w-[428px] flex-col px-6 pb-10 pt-20">
           <div className="mt-auto text-center">
             <h1 className="text-[26px] font-semibold leading-tight tracking-tight">{title}</h1>
