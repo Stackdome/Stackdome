@@ -269,6 +269,26 @@ stackdome list volumes --stack storefront -o json
 
 Require that volume's `status.phase` to be `Ready`. Use a time-limited retry only for `Pending`. Do not delete an existing volume as an automatic fix.
 
+You can also create a volume directly in an existing stack:
+
+```bash
+stackdome create volume app-data \
+  --size 10Gi \
+  --stack storefront \
+  -o json
+```
+
+To permanently delete a volume:
+
+```bash
+stackdome delete volume app-data \
+  --stack storefront \
+  --yes \
+  -o json
+```
+
+Delete only volumes that no resource uses. Volume deletion cannot be undone.
+
 Object stores hold Postgres addon backups. They are not Stackfile mounts. Register them in the dashboard or through the API. See [Volumes and object stores](/guides/volumes-and-object-stores).
 
 ## Domains and TLS

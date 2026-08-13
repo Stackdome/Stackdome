@@ -1,6 +1,6 @@
 ---
 title: "Domains and TLS"
-description: "Configure your organization domain and understand the hostnames Stackdome generates."
+description: "Configure a self-hosted domain and expose applications with HTTPS."
 ---
 
 ## Outcome
@@ -22,13 +22,13 @@ For terminal, coding-agent, or CI steps, use [Expose a service with the CLI](/re
 
 Stackdome Cloud supplies the domain, DNS, and TLS. Mark a resource port public, deploy it, and use the URL shown on the stack.
 
-On self-hosted Stackdome, your administrator supplies the organization domain and wildcard DNS. The rest of this page explains that setup and how Stackdome creates hostnames.
+On self-hosted Stackdome, your administrator supplies the organization domain and wildcard DNS. The rest of this page explains that setup.
 
 ### Dashboard prerequisites
 
 - **Access to the Stackdome dashboard.** During alpha, every signup owns one organization and uses its default project, so there is no role or project-selection step.
 - **For self-hosted Stackdome, a domain whose DNS you control.** The installer can also use a `nip.io` trial domain.
-- **For Stackdome Cloud, no domain work is required.** Skip to [Generated hostnames](#generated-hostnames).
+- **For Stackdome Cloud, no domain work is required.** Skip to [Get the public URL](#get-the-public-url).
 
 ## Self-hosted organization domain
 
@@ -64,7 +64,7 @@ That cap lives in the dashboard, not in the API — the API will store more than
 
 ## DNS
 
-Two kinds of name have to resolve to the same place: the dashboard's own name, and every hostname Stackdome generates for a **resource**'s public **port**, all of which sit beneath it.
+The dashboard and every public resource URL must resolve to the same place.
 
 For the dashboard, an `A` record is enough:
 
@@ -72,64 +72,29 @@ For the dashboard, an `A` record is enough:
 example.com.   A   203.0.113.10
 ```
 
-Generated hostnames sit **two labels below** the domain — `<prefix>.<resource>.example.com` — so a record for the dashboard alone does not cover them. Add a wildcard:
+Add a wildcard record for public resource URLs:
 
 ```text
 *.example.com.   A       203.0.113.10
 *.example.com.   CNAME   example.com.
 ```
 
-Either form works; use one, not both. A DNS wildcard answers for names at any depth beneath it, not just one label down, so a single `*.example.com` covers every hostname Stackdome will ever generate. That is verified against a live install: a two-labels-deep name under a wildcard `CNAME` resolves to the same address as the apex.
-
-<Note>
-A wildcard is matched against the closest ancestor of the name that actually exists in the zone. So if you later create a record for `web.example.com` in its own right, `*.example.com` stops answering for `<prefix>.web.example.com` — the generated hostnames for a resource named `web` go dark. If you want a vanity name for a resource, put it somewhere the wildcard does not shadow, or add the explicit records for the generated names too.
-</Note>
+Either form works; use one, not both.
 
 Two more things to open, both on the server your cluster runs on:
 
 - **Port 443**, for the traffic itself.
 - **Port 80**, because certificate validation happens over HTTP. See below.
 
-## Generated hostnames
+## Get the public URL
 
-Only a **public** port gets a hostname. An internal port is reachable inside the stack and has no name outside it. Nothing you do on the Domains page changes that — it is the port's **Expose to public** setting, on the resource in **the drawer**.
-
-The pattern is:
-
-```text
-<generated-prefix>.<resource-name>.<organization-domain>
-```
-
-The prefix is derived, not random. Stackdome takes the stack's ID, the resource's name and the port number, joins them with colons, MD5s that, base32-encodes the digest with the standard alphabet and no padding, lowercases it, and keeps the first 16 characters.
-
-You can reproduce it:
+Only a public HTTP port gets a URL. Mark the port public, deploy the stack, then run:
 
 ```bash
-STACK_ID=f4c1e2a0-6b52-4a5e-9d3f-8c7b1e0a2d64
-RESOURCE=web
-PORT=3000
-printf '%s:%s:%s' "$STACK_ID" "$RESOURCE" "$PORT" \
-  | openssl dgst -md5 -binary \
-  | base32 | tr -d '=' | cut -c1-16 | tr 'A-Z' 'a-z'
-# ba6xykaf6wkmco2c
+stackdome open -o json
 ```
 
-So a stack with that ID, holding a resource named `web` with public port `3000`, on an organization whose domain is `example.com`, is served at:
-
-```text
-ba6xykaf6wkmco2c.web.example.com
-```
-
-Two consequences follow from the inputs:
-
-- **The hostname is stable.** Redeploys, rollbacks and edits to anything else leave it alone, because none of the three inputs change. The stack ID in particular survives everything short of deleting the stack.
-- **Renaming the resource or changing the port number changes the hostname.** The name is part of the input twice — once in the hash, once as the second label — so a rename gives you a new hostname and retires the old one. Change the port number and the prefix changes too. Treat a rename as a URL change.
-
-The stack header lists the public endpoints it has as a pill — the resource name and the hostname — and it links straight out to it. A resource with a public port also gains `public_host` and `public_url` outputs, which is the supported way for another resource to refer to it without you pasting the hash anywhere.
-
-<Note>
-**A fixed prefix, through the API only.** A public port accepts a `subdomain_prefix`. Set it and the hostname becomes `<subdomain_prefix>.<organization-domain>` — one label, and the resource name drops out. There is no field for this in the drawer; it is only reachable through the API. Two ports in the same stack asking for the same prefix are rejected with `subdomain_duplicate`.
-</Note>
+Use the URL returned by the command. The dashboard also shows it in the stack header. Do not construct or guess the URL.
 
 ## Verify TLS
 
@@ -153,7 +118,7 @@ Hostnames ending in `.nip.io`, `.sslip.io`, `.local`, or `.localhost` are non-TL
 
 **TLS is not ready.** Run `stackdome status --conditions` and read the resource's `TLSConfigured` reason and message. Confirm the hostname resolves to the Stackdome installation and that public traffic can reach it. Do not report HTTPS success until the condition is `True` with reason `TLSReady`.
 
-**A URL that used to work now 404s.** Someone renamed the resource or changed the port number. Both are inputs to the generated prefix, so both mint a new hostname. Read the current one off the stack header.
+**A URL that used to work now 404s.** Run `stackdome open -o json` and use the current URL.
 
 **HTTPS breaks after you change the organization domain.** Generated hostnames are rebuilt from the organization's domain, so changing it changes every hostname the next time a resource is saved. Update DNS for the new domain, and expect fresh certificates to be requested for the new names.
 

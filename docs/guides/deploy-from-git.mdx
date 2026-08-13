@@ -226,11 +226,11 @@ Common causes, in the order worth checking:
 - **No `Dockerfile` where the build looked.** **Dockerfile path** is relative to **Build context**, not to the repository root. In a monorepo, get the context right first.
 - **Self-hosted compute is not ready.** Ask the administrator to check [connected compute](/self-host/connect-compute).
 
-<Warning>
-**Builds are not capped.** Stackdome does not limit how many builds run at once — every resource that needs one gets one, immediately. Image builds are CPU-hungry, so on a single-node cluster a handful of simultaneous builds can saturate the node and push every one of them toward its timeout, including builds for stacks you were not touching. Stagger large deploys.
+<Note>
+On Stackdome Cloud, only a limited number of builds run at once. Extra builds wait in a managed queue until capacity is available.
 
-Do not confuse this with the limit that does exist. [Preview environments](/guides/preview-environments) cap how many previews may be **active at one time**, and a pull request that would exceed it is skipped rather than queued. That bounds how many previews you accumulate; it does not bound how many builds run concurrently, and nothing bounds the builds your own deploys start.
-</Warning>
+On self-hosted Stackdome, builds use your connected compute. If several builds exhaust its capacity, stagger deployments or add compute capacity.
+</Note>
 
 
 ## Related tasks
