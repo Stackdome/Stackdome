@@ -4,6 +4,7 @@ import {
   useImperativeHandle,
   useRef,
 } from "react";
+import { useTheme } from "@/contexts/theme-provider";
 
 const turnstileScriptID = "cloudflare-turnstile-script";
 const turnstileScriptURL =
@@ -12,6 +13,9 @@ const turnstileScriptURL =
 export interface TurnstileRenderOptions {
   sitekey: string;
   action: string;
+  /* Default is a fixed 300px, narrower than the form's fields. */
+  size?: "normal" | "flexible" | "compact";
+  theme?: "light" | "dark" | "auto";
   callback: (token: string) => void;
   "expired-callback": () => void;
   "error-callback": () => void;
@@ -81,6 +85,10 @@ export const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidget
   function TurnstileWidget({ siteKey, action, onToken, onUnavailable }, ref) {
     const containerRef = useRef<HTMLDivElement>(null);
     const widgetIDRef = useRef<string | null>(null);
+    /* ThemeProvider's "system" and Turnstile's "auto" both mean
+       prefers-color-scheme, so the names map straight across. */
+    const { theme } = useTheme();
+    const widgetTheme = theme === "system" ? "auto" : theme;
     const onTokenRef = useRef(onToken);
     const onUnavailableRef = useRef(onUnavailable);
 
@@ -106,6 +114,8 @@ export const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidget
           widgetIDRef.current = api.render(containerRef.current, {
             sitekey: siteKey,
             action,
+            size: "flexible",
+            theme: widgetTheme,
             callback: (token) => onTokenRef.current(token),
             "expired-callback": () => onTokenRef.current(""),
             "error-callback": () => {
@@ -125,12 +135,19 @@ export const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidget
           widgetIDRef.current = null;
         }
       };
-    }, [siteKey, action]);
+      /* widgetTheme is a dep because Turnstile has no setter for it: repainting
+         means remove and re-render, which costs the visitor their token. */
+    }, [siteKey, action, widgetTheme]);
 
     return (
+      /* min-h reserves the height so the submit button doesn't jump when the
+         widget paints. Padding, not margin: the form's space-y-3 owns the
+         margins, so py-2 stacks to 20px of air here against the fields' 12px.
+         That air is the only separation available, since Cloudflare renders the
+         plate itself out of reach of our stylesheets. */
       <div
         ref={containerRef}
-        className="cf-turnstile min-h-[65px]"
+        className="cf-turnstile min-h-[65px] py-2"
         data-sitekey={siteKey}
         data-action={action}
       />
