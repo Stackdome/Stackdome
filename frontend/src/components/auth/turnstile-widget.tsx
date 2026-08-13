@@ -15,8 +15,6 @@ export interface TurnstileRenderOptions {
   action: string;
   /* Default is a fixed 300px, narrower than the form's fields. */
   size?: "normal" | "flexible" | "compact";
-  /* "auto" follows prefers-color-scheme, which is exactly what ThemeProvider's
-     "system" does, so the two agree without us resolving the media query. */
   theme?: "light" | "dark" | "auto";
   callback: (token: string) => void;
   "expired-callback": () => void;
@@ -137,18 +135,16 @@ export const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidget
           widgetIDRef.current = null;
         }
       };
-      /* widgetTheme is a dep because Turnstile has no setter for it: the only
-         way to repaint in the other theme is to remove and re-render. That
-         costs the visitor their token, so the challenge re-runs. Toggling the
-         theme mid-signup is rare and the re-run is usually invisible. */
+      /* widgetTheme is a dep because Turnstile has no setter for it: repainting
+         means remove and re-render, which costs the visitor their token. */
     }, [siteKey, action, widgetTheme]);
 
     return (
       /* min-h reserves the height so the submit button doesn't jump when the
-         iframe paints. Padding, not margin: the form's space-y-3 owns the
+         widget paints. Padding, not margin: the form's space-y-3 owns the
          margins, so py-2 stacks to 20px of air here against the fields' 12px.
-         That air is the only separation available; the plate's fill, border and
-         radius are inside a cross-origin iframe. */
+         That air is the only separation available, since Cloudflare renders the
+         plate itself out of reach of our stylesheets. */
       <div
         ref={containerRef}
         className="cf-turnstile min-h-[65px] py-2"
