@@ -402,6 +402,12 @@ func checkPersistedComputeTopology(ctx context.Context, mode config.ComputeMode,
 func (e *environmentImpl) setupObservability(context.Context) error {
 	e.Observability = observability.NewMetrics()
 	e.Observability.RegisterStackCollector(observability.NewDatabaseStackSnapshotSource(e.DBSession))
+	if e.Config.IsStackdomeCloud() {
+		e.Observability.RegisterComputeAccessCollector(
+			observability.NewDatabaseComputeAccessSnapshotSource(e.DBSession),
+			e.Config.StackdomeCloud.Access.MaxActiveSharedComputeLeases,
+		)
+	}
 	return nil
 }
 
