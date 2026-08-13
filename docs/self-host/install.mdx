@@ -30,13 +30,13 @@ curl -fsSL https://get.stackdome.com/install.sh |
 
 ### Agents
 
-Pin the installer version, validate the downloaded script, provide every required input, and request structured output:
+Download the current installer, validate it before execution, provide every required input, and request structured output:
 
 ```bash
 installer=$(mktemp)
 
 curl -fsSL \
-  https://get.stackdome.com/releases/v0.0.3-alpha/install.sh \
+  https://get.stackdome.com/install.sh \
   -o "$installer"
 
 sh -n "$installer"
@@ -47,7 +47,11 @@ sudo sh "$installer" \
   --credentials-file /root/stackdome-credentials.json
 ```
 
-For automation, exit code `0` means success. Progress and diagnostics go to stderr, while stdout contains the final JSON result. The generated admin password is written to the mode-protected credentials file rather than exposed in JSON. Use a versioned URL for deterministic automation; use `/install.sh` when you explicitly want the newest release.
+For automation, exit code `0` means success. Progress and diagnostics go to stderr, while stdout contains the final JSON result. The generated admin password is written to the mode-protected credentials file rather than exposed in JSON.
+
+`/install.sh` is the live installer channel. Publishing an installer release creates an immutable copy and promotes the same script to this URL. The promoted script embeds that release tag, then downloads and checksum-verifies the matching installer binary from GitHub Releases. New downloads therefore select the latest successfully promoted installer release; the CDN may retain the previous script for up to five minutes after promotion.
+
+The installer binary and the Hub image are separate artifacts. On a fresh installation, the binary deploys `quay.io/stackdome/stackdome:latest` unless you provide `--image`; an upgrade without `--image` keeps the image already deployed.
 
 ## Prerequisites
 
