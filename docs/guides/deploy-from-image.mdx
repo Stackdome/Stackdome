@@ -188,7 +188,7 @@ A release validates every image source against its registry before it renders an
 | Event | Means |
 | --- | --- |
 | **Validating release** | The checks started. |
-| **Release checks passed** | Every check genuinely passed. |
+| **Release checks passed** | Every check passed. |
 | `Check source.image.ref:<code> failed for <resource>: <message>` | One check failed. The release then fails with `release validation failed: N error(s)`. |
 
 Three failures are specific to pulling an image, and the distinction between the first two is the whole point:
@@ -207,7 +207,7 @@ On self-hosted Kubernetes compute, one reference is deliberately skipped: an ima
 
 Unauthenticated pulls from Docker Hub are throttled. When the registry answers the hub's probe with a rate-limit signal instead of an answer, Stackdome does **not** fail the release — a limit can persist for hours, and the image would most likely have pulled fine. It logs a warning, skips that check, and lets the deploy continue.
 
-The observable symptom is an absence. The deploy runs normally, but **Release checks passed** never appears in that release's timeline. That line asserts every check genuinely passed, so a single skipped check withholds it for the whole release — the other resources in the stack may well have been verified, and you cannot tell from the timeline which were which. Two things follow:
+The observable symptom is an absence. The deploy runs normally, but **Release checks passed** never appears in that release's timeline. That line appears only when every check passes, so a single skipped check withholds it for the whole release — the other resources in the stack may well have been verified, and you cannot tell from the timeline which were which. Two things follow:
 
 - **Early failure detection is gone for the image that was skipped.** A typo in that reference is no longer caught before the deploy; it surfaces later as the resource failing to start.
 - **The destination still has to pull.** The hub's probe is not the pull. A destination whose own unauthenticated pulls are being throttled will stall on the image no matter what the hub concluded, and the deploy runs to its timeout.
