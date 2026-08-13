@@ -1,0 +1,145 @@
+---
+title: "Build a Git app with MySQL"
+description: "Create a secret, build Stackdome/test-repo, add MySQL, and inspect the live release, logs, and metrics."
+sidebarTitle: "Git build with MySQL"
+keywords: ["Git build", "MySQL", "secrets", "build logs", "dashboard quickstart"]
+---
+
+Build the `Stackdome/test-repo` Dockerfile, connect the app to MySQL, and follow the release from image build to a live URL.
+
+## Before you start
+
+- Connect GitHub under **Git providers** and grant access to `Stackdome/test-repo`.
+- Use the demo value `MYSQL_PASS` only for this quickstart. Use a strong password for any real application.
+
+<Steps>
+  <Step title="Create the MySQL secret">
+    Open **Secrets** from the sidebar and select **Create Secret**. Enter:
+
+    | Field | Value |
+    | --- | --- |
+    | Name | `mysql-secret` |
+    | Description | `mysql-secret` |
+    | Type | **Generic** |
+    | Secret data key | `MYSQL_PASS` |
+    | Secret data value | `MYSQL_PASS` |
+
+    Select **Create Secret**.
+
+    ![The Create New Secret dialog filled with the name mysql-secret and a masked MYSQL_PASS key-value pair.](/images/quickstart-git-01-secret.png)
+  </Step>
+
+  <Step title="Start from a Git provider">
+    From **Stacks**, select **New Stack**, then choose **From git provider**.
+
+    ![The New Stack dialog with From git provider, Build from blocks, From template, Docker compose, and Blank slate.](/images/quickstart-git-02-start.png)
+  </Step>
+
+  <Step title="Choose the repository">
+    On **Connected provider**, select `Stackdome/test-repo`, then select **Continue**.
+
+    ![The repository picker with Stackdome/test-repo selected from the connected github.com provider.](/images/quickstart-git-03-repository.png)
+  </Step>
+
+  <Step title="Configure the Git service">
+    Use these values:
+
+    | Field | Value |
+    | --- | --- |
+    | Service name | `test-repo` |
+    | Branch | `main` |
+    | Port | `3000` |
+    | Dockerfile path | `Dockerfile` |
+    | Build context | `.` |
+    | Expose publicly | On |
+
+    Select **Open in editor**.
+
+    ![The Configure your service screen for Stackdome test-repo with main, port 3000, Dockerfile, build context dot, and public exposure.](/images/quickstart-git-04-service-config.png)
+
+    The editor opens with one `test-repo` resource. It shows `git build` and public port `3000`.
+
+    ![The test-repo stack editor with one Git build resource on the architecture canvas and the Deploy button above it.](/images/quickstart-git-05-editor.png)
+  </Step>
+
+  <Step title="Add MySQL">
+    Select **Add resource**, then choose **MySQL** under **Databases**.
+
+    ![The Add resource panel with MySQL selected and a new mysql resource on the canvas next to test-repo.](/images/quickstart-git-06-add-mysql.png)
+  </Step>
+
+  <Step title="Configure MySQL">
+    Open the `mysql` resource. The prebuilt block uses `mysql:8` and creates the `mysql-data` volume.
+
+    On **Environment**, add:
+
+    | Name | Source | Value |
+    | --- | --- | --- |
+    | `MYSQL_ROOT_PASSWORD` | Secret | `mysql-secret` → `MYSQL_PASS` |
+    | `MYSQL_DATABASE` | Plain text | `todos` |
+
+    Set `MYSQL_ROOT_PASSWORD` to **Secret**, choose `mysql-secret`, then choose its `MYSQL_PASS` key.
+
+    ![The mysql Environment tab with MYSQL_ROOT_PASSWORD mapped to the MYSQL_PASS key in mysql-secret.](/images/quickstart-git-08-mysql-secret.png)
+  </Step>
+
+  <Step title="Connect the app to MySQL">
+    Open the `test-repo` resource. On **Environment**, add:
+
+    | Name | Source | Value |
+    | --- | --- | --- |
+    | `MYSQL_HOST` | Resource | `mysql` → **Host** |
+    | `MYSQL_USER` | Plain text | `root` |
+    | `MYSQL_PASSWORD` | Secret | `mysql-secret` → `MYSQL_PASS` |
+    | `MYSQL_DB` | Plain text | `todos` |
+
+    ![The test-repo Environment tab with a MySQL resource host, root user, mysql-secret password, and todos database name.](/images/quickstart-git-09-app-env.png)
+
+    These names match the application's Compose file. `MYSQL_DATABASE=todos` belongs on the MySQL resource. `MYSQL_DB=todos` belongs on the app.
+  </Step>
+
+  <Step title="Deploy and watch the release">
+    Select **Deploy**, then open **Deployments**. The release starts with both resources pending. The activity panel shows the image build and MySQL startup as they happen.
+
+    ![The test-repo deployment timeline while the release is deploying, with mysql and test-repo pending and live activity events.](/images/quickstart-git-10-deploying.png)
+  </Step>
+
+  <Step title="Open the build logs">
+    In the activity panel, select **View build logs** next to `Building test-repo`. The build log shows source checkout, Dockerfile steps, dependency installation, and the image push.
+
+    ![The Build logs dialog for test-repo showing an active Docker image build and yarn install output.](/images/quickstart-git-11-build-logs.png)
+
+    Close the dialog to return to the timeline.
+  </Step>
+
+  <Step title="Open the live app">
+    Wait until both resources are **READY** and the release is **LIVE**. The stack header now shows a **PUBLIC** row for `test-repo`. Select that URL to open the app.
+
+    ![The completed test-repo deployment with a LIVE release, two ready resources, and a public test-repo URL in the stack header.](/images/quickstart-git-12-live.png)
+  </Step>
+
+  <Step title="Check runtime logs">
+    Open **Logs**. The stack log joins lines from both resources and labels each line with `mysql` or `test-repo`. Confirm MySQL is ready for connections and the app is listening on port `3000`.
+
+    ![The Logs tab for test-repo showing connected stack logs from mysql and test-repo, including MySQL ready and the app listening on port 3000.](/images/quickstart-git-13-stack-logs.png)
+  </Step>
+
+  <Step title="Check metrics">
+    Open **Metrics**. The stack totals appear first, followed by CPU and memory for each resource.
+
+    ![The Metrics tab for test-repo showing live stack CPU and memory plus separate mysql and test-repo resource readings.](/images/quickstart-git-14-metrics.png)
+
+    <Check>
+      The quickstart is complete when the release is **LIVE**, the public URL opens, runtime logs show both resources running, and metrics show both resources as **READY**.
+    </Check>
+  </Step>
+</Steps>
+
+<CardGroup cols={2}>
+  <Card title="Environment variables and secrets" icon="key" href="/guides/environment-variables">
+    Learn how secret, resource, and plain-text values are stored.
+  </Card>
+  <Card title="Diagnose build failures" icon="hammer" href="/guides/build-failures">
+    Use build status and logs when a Dockerfile build does not finish.
+  </Card>
+</CardGroup>

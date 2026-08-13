@@ -10,17 +10,17 @@ A stack is what you edit. A **release** is the fixed, identifiable result of one
 List the releases for the current stack, newest first:
 
 ```bash
-stackdome release list
+stackdome list releases
 ```
 
 Use structured output to retain full IDs for later commands:
 
 ```bash
-stackdome release list -o json
-stackdome release info <release-id> -o json
+stackdome list releases -o json
+stackdome describe release <release-id> -o json
 ```
 
-`release list` returns release summaries. `release info` returns the detailed release, including its state, message, cause, validation errors, pins, outcome, snapshot, and live status when the release is active or currently serving.
+`list releases` returns release summaries. `describe release` returns the detailed release, including its state, message, cause, validation errors, pins, outcome, snapshot, and live status when the release is active or currently serving.
 
 A release is terminal when `state` is `Released`, `Failed`, `Superseded`, or `Cancelled`. `Released` proves that release converged at some point; it does not by itself prove the release is still serving or healthy. For the current deployment, also run:
 
@@ -28,29 +28,31 @@ A release is terminal when `state` is `Released`, `Failed`, `Superseded`, or `Ca
 stackdome status -o json
 ```
 
-Require `converged_release.id` to match the release ID, `converged_release.state` to be `Released`, and `converged_release.health` to be `ok`. Before claiming that release is also the newest attempt, require `latest_release.id` to match it and `latest_release.state` to be `Released`. See [inspect stack status](/guides/status#prove-convergence-and-health) for the full check.
+Require `stack.converged_release.id` to match the release ID, `stack.converged_release.state` to be `Released`, and `live_status.health` to be `ok`. Before claiming that release is also the newest attempt, require `stack.latest_release.id` to match it and `stack.latest_release.state` to be `Released`. See [inspect stack status](/guides/status#prove-convergence-and-health) for the full check.
 
-Every release subcommand accepts `--stack <name>` to override the current stack context.
+Every release command accepts `--stack <name>` to override the current stack context.
 
 <Visibility for="agents">
-  Preserve the full `release.id` returned by `stackdome deploy -o json`. Use it for `release info`, `release events`, and both status-ID comparisons; do not claim the newest attempt succeeded unless both `converged_release.id` and `latest_release.id` match it.
+  Preserve the full `release.id` returned by `stackdome deploy -o json`. Use it with `describe release`, `list release-events`, and both status-ID comparisons; do not claim the newest attempt succeeded unless both `stack.converged_release.id` and `stack.latest_release.id` match it.
 </Visibility>
 
-## Follow release events
+## Read release events
 
 Read the recorded events once:
 
 ```bash
-stackdome release events <release-id>
+stackdome list release-events <release-id>
 ```
 
-Or follow new events while a deployment progresses:
+While a person is actively watching a deployment, the CLI can keep the stream open:
 
 ```bash
-stackdome release events <release-id> --follow
+stackdome list release-events <release-id> --follow
 ```
 
-Without `--follow`, structured output is an array of release events. With `--follow -o json`, the CLI emits newline-delimited envelopes containing `event` and `data`; process one line at a time.
+Without `--follow`, structured output is an array of release events. With `--follow -o json`, the CLI emits newline-delimited envelopes containing `event` and `data`; stop it when you have the needed event.
+
+Agents and CI jobs should use `deploy --wait --timeout <duration>` and the one-time event list. Do not leave `--follow` running unattended.
 
 Events include timestamped stack or resource messages, levels, and links such as a build ID. Use a build ID with the [build-failure guide](/guides/build-failures) instead of searching runtime logs for build output.
 
@@ -59,11 +61,11 @@ Events include timestamped stack or resource messages, levels, and links such as
 Cancellation is available only while a release is `Pending`:
 
 ```bash
-stackdome release cancel <release-id>
-stackdome release info <release-id> -o json
+stackdome cancel release <release-id>
+stackdome describe release <release-id> -o json
 ```
 
-The cancel command exits after the API accepts the request and prints confirmation to `stderr`; it does not return a structured result. Verify the terminal state with `release info`.
+The cancel command exits after the API accepts the request. Verify the terminal state with `stackdome describe release <release-id> -o json`.
 
 <Warning>
 Cancellation exit codes are not uniform in the current CLI. A successful `release cancel` request exits `0`, while `deploy --wait` exits with general-error code `1` if the release ends as `Cancelled`. Exit code `130` is reserved for local user-cancel paths such as interrupting a deployment wait; do not use it as the only test for a cancelled release.
@@ -114,7 +116,7 @@ Each release has one state. These are the values the API returns, and the words 
 | --- | --- |
 | `Pending` | Created and queued. The application change has not been applied yet. |
 | `InProgress` | Being validated, rendered, applied, or waited on. |
-| `Released` | Reached convergence successfully. It may have since been replaced; compare its ID with `converged_release.id` to prove it is serving. |
+| `Released` | Reached convergence successfully. It may have since been replaced; compare its ID with `stack.converged_release.id` to prove it is serving. |
 | `Failed` | It will not converge — validation rejected it, a build failed, a resource never became ready, or it ran past the deploy timeout. |
 | `Superseded` | You deployed again while this one was still in flight. The newer release won and this one stopped. |
 | `Cancelled` | You cancelled it before the application change was applied. |
@@ -178,13 +180,17 @@ The **Metrics** tab shows live usage for the running stack, refreshed continuous
 
 </Visibility>
 
-## Rolling back
+## Roll back a release
 
 A release you can name is a release you can return to.
 
-<Warning>
-Rollback is dashboard-only in the current CLI. There is no `stackdome release rollback` command. Use the dashboard steps below.
-</Warning>
+From the CLI, create a new release from a past one and wait for it:
+
+```bash
+stackdome rollback release <release-id> --wait -o json
+```
+
+Use `--stack <name>` when the target is not in the current context. The command returns the new release and, with `--wait`, its live status.
 
 <Visibility for="humans">
 

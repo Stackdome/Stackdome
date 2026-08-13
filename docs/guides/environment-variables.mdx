@@ -5,106 +5,20 @@ description: "Set configuration on a resource, reference secrets and addons, and
 
 ## Outcome
 
-Configure the values an application reads at runtime without hardcoding service addresses or secret values. The deployed release receives literal settings, secret keys, addon credentials, and resource outputs through the environment, and remains healthy after the change.
+Add plain values, secret keys, addon values, or another resource's address to an application.
 
 ## Prerequisites
 
-- A repository with a `stackfile.yaml` and evidence of the environment variables the application expects.
-- The URL of Stackdome Cloud or a self-hosted installation, plus an API token. See [authentication and API tokens](/reference/authentication).
-- Existing resources or addons for any generated values you want to reference.
-- Secret values supplied through an untracked local file when the application needs credentials. Do not put secret values in the Stackfile or command history.
+- A stack with at least one resource.
+- The names and values the application expects.
+- An existing secret, addon, or resource when you want to reference one.
 
-## Agent prompt
+## Use the CLI
 
-```text
-Configure this application's required environment variables in its Stackfile. Keep non-sensitive values literal, connect service addresses through resource or addon outputs, put sensitive values in a Stackdome secret, validate the Stackfile, deploy the change, and verify that the release is healthy. Never write secret values into stackfile.yaml or report them in the result.
-```
-
-## Agent actions
-
-<Steps>
-  <Step title="Inspect the application's configuration contract">
-    Read the repository's example environment file, configuration schema, startup code, and deployment notes. Classify every required value as literal, secret, resource output, or addon output; do not invent defaults for required credentials.
-  </Step>
-  <Step title="Create a secret when needed">
-    Put the required `KEY=VALUE` pairs in a local file that is excluded from version control, then run `stackdome secret create <secret-name> --from-file <path> -o json`. Prefer a new application-specific secret. `stackdome secret set` replaces the named secret's complete data set, so use it only with a complete user-supplied replacement file containing every key that must remain.
-  </Step>
-  <Step title="Edit the Stackfile">
-    Put literal and resource-derived values under the resource's `env`. Put secret-key mappings under `secrets`, and Postgres connection mappings under `addons`. The Stackfile contains secret names and keys, never secret values.
-  </Step>
-  <Step title="Validate and deploy">
-    Run `stackdome validate`, authenticate with an API token, confirm the active scope with `stackdome whoami -o json`, deploy with `stackdome deploy --wait -o json`, and retain its non-empty `release.id` as the deployed release ID.
-  </Step>
-  <Step title="Verify the running release">
-    Run `stackdome status -o json`. Require `converged_release.id` to equal the deployed release ID, its state to be `Released`, and its health to be `ok`; then inspect application logs for configuration or connection errors without printing the environment.
-  </Step>
-</Steps>
-
-## Success criteria
-
-- `stackdome validate` exits successfully.
-- `stackdome secret info <name> -o json` identifies the expected secret name and key names without revealing their values.
-- If `stackdome secret set` was used, its input was a complete user-supplied replacement file and `secret info` still lists every key that must remain.
-- `stackdome deploy --wait -o json` exits successfully, returns a non-empty `release.id` that is retained as the deployed release ID, and returns `release.state` as `Released`.
-- `stackdome status -o json` returns `converged_release.id` equal to the deployed release ID, `converged_release.state` as `Released`, and `converged_release.health` as `ok`.
-- The application starts without a missing-variable or connection error, and neither the committed Stackfile nor the agent response contains a secret value.
-
-## CLI and Stackfile workflow
-
-Create sensitive values from an untracked dotenv file. `secret create`, `secret set`, `secret info`, `secret list`, and `secret delete` are supported by the current CLI.
-
-```bash
-stackdome secret create storefront-secrets \
-  --from-file .stackdome-secrets.env \
-  -o json
-stackdome secret info storefront-secrets -o json
-```
-
-<Warning>
-  `stackdome secret set` is replacement, not merge. The submitted `--data` values or `--from-file` contents become the secret's complete data set, and any existing key omitted from that input is removed. For a rotation, either create a new application-specific secret or require the user to supply a complete replacement file containing the new value and every other key that must remain. Stackdome does not reveal existing values, so an agent cannot safely reconstruct or partially patch a shared secret from `secret info`.
-</Warning>
-
-Connect values in the Stackfile. This example combines a literal, another resource's generated host, and a secret key:
-
-```yaml
-resources:
-  api:
-    image: ghcr.io/acme/storefront-api:1.4.0
-    env:
-      APP_ENV: production
-      CACHE_HOST: "{{ cache.host }}"
-    secrets:
-      storefront-secrets:
-        API_KEY: api_key
-
-  cache:
-    image: redis:7-alpine
-    ports:
-      - name: redis
-        port: 6379
-        protocol: TCP
-```
-
-The key under `secrets` is the Stackdome secret name. Each mapping points the environment-variable name on the left to a key inside that secret on the right. For Postgres output mappings, use the [Postgres workflow](/guides/postgres#cli-and-stackfile-workflow).
-
-```bash
-stackdome validate
-stackdome whoami -o json
-stackdome deploy --wait -o json
-stackdome status -o json
-```
-
-<Visibility for="agents">
-  - Exact Stackfile fields: literals and resource output templates belong in `resources.<resource>.env`; secret references belong in `resources.<resource>.secrets.<secret-name>.<ENV_NAME>`.
-  - Parse only structured `stdout`. Retain `release.id` as the deployed release ID; confirm a successful deploy exit, `release.state == "Released"`, `converged_release.id` equal to that ID, `converged_release.state == "Released"`, and `converged_release.health == "ok"`.
-  - Never run an environment dump to test a secret. Use `stackdome secret info <name> -o json` to check metadata and key names, then use application-specific readiness or logs.
-  - Never use `stackdome secret set` for a partial key rotation. It replaces the complete data set. Prefer a new application-specific secret, or use `stackdome secret set <name> --from-file <path> -o json` only when the user supplied a complete replacement file containing every key that must remain; verify the full key-name set afterwards with `secret info`.
-  - Recovery: correct the mapping and rerun `stackdome validate`; use `stackdome release events <release-id> --follow` and `stackdome logs <resource> --tail 100` for a failed release. Delete a secret with `stackdome secret delete <name> --yes` only after every Stackfile reference has been removed and deployed.
-</Visibility>
-
-<Visibility for="humans">
+For terminal, coding-agent, or CI steps, use [Manage environment variables and secrets with the CLI](/reference/cli-workflows#environment-variables-and-secrets).
 
 ## Dashboard workflow
+
 
 Every **resource** carries its own list of environment variables. You set them in the **drawer**, on its **Environment** tab. Some of them you type; the interesting ones you *point* at something else — an organization secret, a Postgres **addon**, or another resource in the same **stack** — and Stackdome fills in the value when it deploys.
 
@@ -185,7 +99,7 @@ Values you would rather not have sitting in a stack's spec go in an organization
 
 ### Create the secret
 
-Open **Secrets** under **PLATFORM** in the sidebar, at `/secrets`. The page is headed **Secrets** — *"Manage sensitive data like API keys, passwords, and certificates"* — with **Create Secret** top right, a **Filter secrets…** box, a **TYPE** filter defaulting to **ALL**, and a **SORT** control defaulting to **RECENTLY CREATED**. Existing secrets sit in an **ORGANIZATION SECRETS** panel, one row each: name, description, type badge, creation date, and a `⋯` menu.
+Open **Secrets** under **Platform** in the sidebar.
 
 ![The Secrets page content column, headed PLATFORM Secrets with the subtitle Manage sensitive data like API keys, passwords, and certificates and a Create Secret button top right. Below it a Filter secrets field, a TYPE ALL dropdown and a SORT RECENTLY CREATED dropdown, then an ORGANIZATION SECRETS · 1 panel holding a single row: a key icon, the name test, No description, a Generic badge, the date 7/18/2026 and a three-dot menu.](/images/env-secrets-page.png)
 
@@ -308,7 +222,7 @@ Deploying takes a snapshot of the stack and resolves it — that snapshot is wha
 - **Plain text** — copied through unchanged.
 - **Self** — the output is looked up on the resource itself and becomes a literal value.
 - **Resource** / **Template** — outputs are looked up on the source resource; a template is executed against them.
-- **Secret** / **Addon** — the values are written into the stack's namespace and the variable is pointed at them by name, not copied into the manifest.
+- **Secret** / **Addon** — the selected value is loaded when the resource starts.
 
 If resolution cannot finish, the release fails and the reason is on its timeline. The messages you are most likely to meet:
 
@@ -328,7 +242,6 @@ The messages in this table are read from Stackdome's resolver, not reproduced by
 
 The drawer catches the cheaper mistakes before you ever deploy, inline on the row: `Required` for a missing name, `Duplicate name "..."`, and `Pick a secret`, `Pick a key`, `Pick an addon`, `Pick a database`, `Pick a field`, `Pick a resource`, `Pick an output` for a half-finished reference.
 
-</Visibility>
 
 ## Related tasks
 

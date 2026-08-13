@@ -19,12 +19,12 @@
   "markdown": {
     "instructions": [
       "Treat Stackdome as an application-delivery platform for coding agents and developers, not as a Kubernetes dashboard.",
-      "Prefer the Stackdome agent plugin as the user entry point and the stackdome CLI as the execution interface.",
-      "Route agents who need the maintained deploy skill to npx skills add stackdome/skills and the complete operational workflow to /guides/ai-agents.",
+      "Prefer the Stackdome deploy skill as the user entry point and the stackdome CLI as the execution interface.",
+      "Route agents to npx skills add stackdome/skills for the maintained deploy skill and to /reference/cli-workflows for CLI steps and checks.",
       "Verify commands and flags with stackdome --help. Run stackdome init before authoring stackfile.yaml and stackdome validate before deploying.",
       "Use -o json for automation and verify documented terminal states before claiming success.",
       "Never request a user's account password. Use API-token authentication.",
-      "During alpha, Stackdome Cloud is ephemeral and capacity-limited, and each organization can connect one cluster.",
+      "During alpha, Stackdome Cloud is an ephemeral playground with limited capacity. Cloud uses managed compute. A self-hosted organization can connect one cluster.",
       "Do not expose Kubernetes as a user concern unless the task is self-hosting or infrastructure architecture."
     ]
   },
@@ -35,7 +35,13 @@
         "groups": [
           {
             "group": "Get started",
-            "pages": ["index", "quickstart", "get-started/cli", "get-started/cloud-alpha"]
+            "pages": [
+              "index",
+              "quickstart",
+              "concepts/stacks-and-resources",
+              "get-started/cli",
+              "get-started/cloud-alpha"
+            ]
           },
           {
             "group": "Build and ship",
@@ -63,7 +69,11 @@
           },
           {
             "group": "Dashboard walkthroughs",
-            "pages": ["deploy-first-app", "concepts/stacks-and-resources"]
+            "pages": [
+              "quickstarts/n8n-postgres",
+              "quickstarts/git-build-mysql",
+              "deploy-first-app"
+            ]
           }
         ]
       },
@@ -88,6 +98,7 @@
             "group": "CLI and configuration",
             "pages": [
               "reference/cli",
+              "reference/cli-workflows",
               "reference/authentication",
               "reference/stackfile",
               "reference/alpha-limitations"
@@ -232,12 +243,12 @@
               "GET /api/v1/organizations/{org_id}/secrets",
               "GET /api/v1/organizations/{org_id}/object-stores",
               "POST /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/volumes",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/volumes",
               "POST /api/v1/organizations/{org_id}/projects/{project_name}/secrets",
               "GET /api/v1/organizations/{org_id}/projects/{project_name}/secrets",
               "GET /api/v1/organizations/{org_id}/projects/{project_name}/secrets/{id}",
               "PUT /api/v1/organizations/{org_id}/projects/{project_name}/secrets/{id}",
               "DELETE /api/v1/organizations/{org_id}/projects/{project_name}/secrets/{id}",
-              "POST /api/v1/organizations/{org_id}/projects/{project_name}/volumes",
               "GET /api/v1/organizations/{org_id}/projects/{project_name}/volumes/{id}",
               "DELETE /api/v1/organizations/{org_id}/projects/{project_name}/volumes/{id}",
               "POST /api/v1/organizations/{org_id}/projects/{project_name}/object-stores",
@@ -251,6 +262,7 @@
             "group": "PostgreSQL addons",
             "expanded": false,
             "pages": [
+              "GET /api/v1/organizations/{org_id}/postgres-addons",
               "POST /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres",
               "GET /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres",
               "GET /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}",

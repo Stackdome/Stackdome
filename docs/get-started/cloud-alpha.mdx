@@ -1,24 +1,24 @@
 ---
 title: "Stackdome Cloud during alpha"
-description: "Availability, ephemerality, and fallback options for Stackdome Cloud during alpha."
+description: "Use Stackdome Cloud as an ephemeral, capacity-limited playground during alpha."
 keywords: ["Stackdome Cloud", "Cloud alpha", "ephemeral environment", "capacity limits", "self-hosted fallback"]
 ---
 
-Stackdome Cloud lets you use the Stackdome application-delivery workflow without first setting up infrastructure. Access is open while capacity is available.
+Stackdome Cloud is an ephemeral playground for trying Stackdome without setting up your own infrastructure. Capacity is limited during alpha, and environments are temporary.
 
-## Alpha commitments
+## What to expect
 
-- Environments are ephemeral.
-- Capacity is limited during alpha.
-- Access remains available while capacity allows.
+- Use it to test Stackdome and explore its workflows.
+- Environments may be removed or reset.
+- New environments are available only while capacity allows.
 
-Plan for the environment to be temporary. Stackdome does not currently document an expiry duration, quota, SLA, region list, or persistence guarantee for the alpha.
+Do not use the Cloud alpha for data or workloads you need to keep.
 
 ## If capacity is unavailable
 
 If Stackdome Cloud cannot allocate an environment, you can:
 
-- Join the Cloud availability list.
+- [Join the Cloud availability list](mailto:ashish@stackdome.com?subject=Request%20to%20join%20the%20Stackdome%20Cloud%20waitlist).
 - [Connect a self-hosted Stackdome installation](/self-host/install).
 
 Moving to a self-hosted destination does not change your Stackfile or deployment workflow. Authenticate the CLI against the new Stackdome host, then repeat the same validate, deploy, and status commands.

@@ -4,7 +4,7 @@ description: "Read and follow stack or resource runtime logs, select time window
 keywords: ["stackdome logs", "runtime logs", "log streaming", "resource logs", "tail logs"]
 ---
 
-`stackdome logs` streams output from running application resources. Use it after a resource starts; use `stackdome build logs` when the image has not finished building.
+`stackdome logs` streams output from running application resources. Use it after a resource starts; use `stackdome logs build` when the image has not finished building.
 
 ## Choose the log source
 
@@ -65,7 +65,7 @@ The command writes log lines to `stdout`. Although the global `-o` flag is accep
 | Log type | Command | Use it for |
 | --- | --- | --- |
 | Runtime | `stackdome logs [resource]` | Startup, requests, crashes, readiness behavior, and application output from running resources. |
-| Build | `stackdome build logs <build-id>` | Source checkout, Dockerfile processing, image build steps, and registry push output. |
+| Build | `stackdome logs build <build-id>` | Source checkout, Dockerfile processing, image build steps, and registry push output. |
 
 If a deploy fails before a resource runs, runtime logs may be empty or unavailable. Find the build ID and follow the [build-failure decision guide](/guides/build-failures) instead.
 
@@ -78,11 +78,11 @@ stackdome status --conditions
 stackdome logs web --since 15m --tail 200
 ```
 
-After a restart, begin following logs before checking whether the resource returned to a ready state:
+After a restart, read a bounded log window and check whether the resource returned to a ready state:
 
 ```bash
-stackdome logs web --tail 100 --follow
-stackdome status --watch
+stackdome logs web --since 15m --tail 100
+stackdome status -o json
 ```
 
-Run those commands in separate terminals. See [restart a resource](/guides/restart) for the full verification sequence.
+Retry the status command for a limited time if the restart is still in progress. See [restart a resource](/guides/restart) for the full verification sequence.

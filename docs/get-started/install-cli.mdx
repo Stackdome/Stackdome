@@ -1,0 +1,64 @@
+---
+title: "Install the CLI"
+description: "Install the Stackdome CLI on macOS or Linux, verify the checksum-protected release, and confirm the installed version."
+keywords: ["install Stackdome CLI", "Stackdome macOS", "Stackdome Linux", "CLI installer", "checksum verification"]
+---
+
+The Stackdome installer downloads the latest CLI release for your machine, verifies its SHA-256 checksum, and installs the `stackdome` binary.
+
+## Install on macOS or Linux
+
+```bash
+curl -fsSL https://get.stackdome.com/cli.sh | sh
+```
+
+The installer supports Intel/AMD64 and ARM64. It uses a writable directory already on `PATH` when possible, preferring `/usr/local/bin`, `$HOME/.local/bin`, or `$HOME/bin`. Otherwise it installs to `$HOME/.local/bin`.
+
+When `$HOME/.local/bin` is not already on `PATH`, the installer updates the appropriate zsh, bash, or POSIX shell profile and prints the command needed for the current shell. A custom directory that is not on `PATH` receives the printed command but is not added to a profile. In GitHub Actions, the installer writes the selected directory to `$GITHUB_PATH`.
+
+Confirm the installed binary:
+
+```bash
+stackdome version
+```
+
+If the installer used `$HOME/.local/bin` and `stackdome` is not found, add that directory to your `PATH` and run the version command again.
+
+## Install from an agent or CI
+
+Download the installer before running it. This makes a failed download stop the job instead of being hidden by pipeline exit-status behavior:
+
+```bash
+installer_file=$(mktemp)
+trap 'rm -f "$installer_file"' EXIT
+curl -fsSL https://get.stackdome.com/cli.sh -o "$installer_file"
+sh "$installer_file"
+stackdome version
+```
+
+The installer performs the same checksum verification in interactive and automated environments.
+
+## Select a version or install directory
+
+Pass installer flags when you need a repeatable version or destination directory:
+
+```bash
+installer_file=$(mktemp)
+trap 'rm -f "$installer_file"' EXIT
+curl -fsSL https://get.stackdome.com/cli.sh -o "$installer_file"
+sh "$installer_file" \
+  --version v0.0.2-alpha \
+  --install-dir "$HOME/.local/bin"
+```
+
+`STACKDOME_VERSION` and `STACKDOME_INSTALL_DIR` provide the same settings for automation. Explicit flags take precedence over environment variables.
+
+If an agent or CI system manages `PATH` itself, prevent profile changes:
+
+```bash
+sh "$installer_file" --no-modify-path
+```
+
+<Card title="Quickstart with the CLI" icon="terminal" href="/get-started/cli">
+  Authenticate, run the CLI preflight, create a Stackfile, and deploy.
+</Card>

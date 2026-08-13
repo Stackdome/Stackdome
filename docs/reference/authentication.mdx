@@ -50,18 +50,18 @@ stackdome whoami -o json
 
 Environment values take precedence over the saved config. If you use the explicit `stackdome login` command, that login is intentionally persisted even when matching environment values are present.
 
-## Human-only email and password login
+## Create a token in the dashboard
 
-A person working in an interactive terminal can run:
+If you do not have a token, run:
 
 ```bash
 stackdome login --url https://<your-stackdome-host>
 ```
 
-The CLI prompts for email and password. Non-interactive login requires either `--token` or both credential flags.
+The CLI prints the sign-in and token-creation links for that Stackdome host. Sign in through the browser, create a Full access API token, then run the token login command from the first section.
 
 <Warning>
-  Agents must not solicit, accept, or store a user's account password. Ask the user for a revocable API token created for automation instead.
+  The CLI does not accept an account password. Agents must not ask for one. Use a revocable API token created for automation.
 </Warning>
 
 ## Clear stored credentials
