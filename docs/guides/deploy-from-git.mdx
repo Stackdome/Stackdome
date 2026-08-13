@@ -187,21 +187,9 @@ You can watch it on the stack's **Deployments** tab. Each release in the deploy 
 
 ### Pushing to git does not deploy
 
-**There is no auto-deploy on push, and no setting to turn one on.** Deploying a stack is something you ask for: the timeline labels a release you started **Manual deploy**, and a rollback **Rollback to #2**. The one release Stackdome starts without being asked is a preview environment's — see the end of this section.
+Automatic deploys on Git push are not supported yet. After you push a change, start a new deployment from the dashboard or CLI.
 
-The GitHub App does subscribe to `push` — the manifest asks for it — so deliveries do arrive at `/api/v1/webhooks/github`. The handler then drops them. Only two event kinds are acted on:
-
-| Event | What Stackdome does |
-| --- | --- |
-| `installation` | Tracks the install: `created` and `unsuspend` record the installation, `deleted` and `suspend` remove it. A suspended installation is never used to mint a token. |
-| `pull_request` | Drives [preview environments](/guides/preview-environments). Pull requests from forks are dropped. |
-| `push` | Nothing. It is accepted, logged, and ignored. |
-
-So a commit to the branch a resource tracks changes nothing on its own. The next deploy you trigger will pick it up, because a branch is resolved at deploy time — but the deploy is yours to start.
-
-**One case does rebuild by itself.** Pushing to the branch of an *open pull request* reaches Stackdome as a `pull_request` `synchronize` event, not as a `push`, so it is handled: the pull request's preview is rebuilt at the new head commit. Two conditions gate that, and failing either drops the delivery silently — the repository must have [preview environments](/guides/preview-environments) enabled, and the pull request's **base branch** must be the one that preview configuration targets. A pull request opened against any other base branch is ignored no matter how often you push to it. Your stack is untouched either way — an ordinary branch push, on a branch with no open pull request, still does nothing.
-
-Every webhook delivery is HMAC-verified against that provider's webhook secret before anything happens, and a bad signature is refused.
+This will be supported soon.
 
 
 ## Troubleshooting
