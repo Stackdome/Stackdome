@@ -1,0 +1,73 @@
+# Twenty — open-source CRM (Postgres + Redis).
+# 1. Replace REPLACE_ENCRYPTION_KEY_VALUE_HERE in BOTH the server and worker
+#    with the same random string (generate with `openssl rand -base64 32`).
+#    This key encrypts OAuth tokens, workspace secrets, and TOTP secrets at
+#    rest — losing it after data exists means losing access to those secrets.
+# 2. Replace REPLACE_POSTGRES_PASSWORD_VALUE_HERE in ALL THREE places (db,
+#    server's PG_DATABASE_URL, worker's PG_DATABASE_URL) with the same value.
+# 3. Open the app and sign up — there's no default admin account; the first
+#    signup creates your workspace and admin user.
+# 4. Services may restart until postgres finishes initializing; that settles
+#    itself.
+# 5. ${self.public_url} / ${server.public_url} resolve at deploy time.
+name: twenty
+
+services:
+  server:
+    image: twentycrm/twenty:v2.26.0
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - server-local-data:/app/packages/twenty-server/.local-storage
+    environment:
+      NODE_PORT: "3000"
+      SERVER_URL: "${self.public_url}"
+      # Kept fully literal on purpose: a ${db.host} reference would turn this
+      # row read-only, hiding the password placeholder from the editor. The
+      # literal host works because a resource's service is named after it.
+      PG_DATABASE_URL: "postgres://postgres:REPLACE_POSTGRES_PASSWORD_VALUE_HERE@db:5432/default"
+      REDIS_URL: "redis://${redis.host}:${redis.port}"
+      STORAGE_TYPE: "local"
+      ENCRYPTION_KEY: "REPLACE_ENCRYPTION_KEY_VALUE_HERE"
+
+  worker:
+    image: twentycrm/twenty:v2.26.0
+    command: ["yarn", "worker:prod"]
+    depends_on:
+      - db
+      - redis
+      - server
+    volumes:
+      - server-local-data:/app/packages/twenty-server/.local-storage
+    environment:
+      SERVER_URL: "${server.public_url}"
+      PG_DATABASE_URL: "postgres://postgres:REPLACE_POSTGRES_PASSWORD_VALUE_HERE@db:5432/default"
+      REDIS_URL: "redis://${redis.host}:${redis.port}"
+      DISABLE_DB_MIGRATIONS: "true"
+      DISABLE_CRON_JOBS_REGISTRATION: "true"
+      STORAGE_TYPE: "local"
+      ENCRYPTION_KEY: "REPLACE_ENCRYPTION_KEY_VALUE_HERE"
+
+  db:
+    image: postgres:16
+    expose:
+      - "5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: "default"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "REPLACE_POSTGRES_PASSWORD_VALUE_HERE"
+
+  redis:
+    image: redis:7
+    command: ["redis-server", "--maxmemory-policy", "noeviction"]
+    expose:
+      - "6379"
+
+volumes:
+  db-data:
+  server-local-data:

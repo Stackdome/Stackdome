@@ -44,4 +44,4 @@ resources:
 
 volumes:
   db-data:
-    size: 5Gi
+    size: 1Gi

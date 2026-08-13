@@ -25,6 +25,8 @@ type UserSignupRequest struct {
 	Organisation *Organisation `json:"organisation,omitempty"`
 	// Optional invite token for joining an existing organization
 	InviteToken *string `json:"invite_token,omitempty"`
+	// Turnstile token required for protected public password signup
+	TurnstileToken *string `json:"turnstile_token,omitempty"`
 }
 
 // NewUserSignupRequest instantiates a new UserSignupRequest object
@@ -183,6 +185,38 @@ func (o *UserSignupRequest) SetInviteToken(v string) {
 	o.InviteToken = &v
 }
 
+// GetTurnstileToken returns the TurnstileToken field value if set, zero value otherwise.
+func (o *UserSignupRequest) GetTurnstileToken() string {
+	if o == nil || o.TurnstileToken == nil {
+		var ret string
+		return ret
+	}
+	return *o.TurnstileToken
+}
+
+// GetTurnstileTokenOk returns a tuple with the TurnstileToken field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *UserSignupRequest) GetTurnstileTokenOk() (*string, bool) {
+	if o == nil || o.TurnstileToken == nil {
+		return nil, false
+	}
+	return o.TurnstileToken, true
+}
+
+// HasTurnstileToken returns a boolean if a field has been set.
+func (o *UserSignupRequest) HasTurnstileToken() bool {
+	if o != nil && o.TurnstileToken != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetTurnstileToken gets a reference to the given string and assigns it to the TurnstileToken field.
+func (o *UserSignupRequest) SetTurnstileToken(v string) {
+	o.TurnstileToken = &v
+}
+
 func (o UserSignupRequest) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
@@ -199,6 +233,9 @@ func (o UserSignupRequest) MarshalJSON() ([]byte, error) {
 	}
 	if o.InviteToken != nil {
 		toSerialize["invite_token"] = o.InviteToken
+	}
+	if o.TurnstileToken != nil {
+		toSerialize["turnstile_token"] = o.TurnstileToken
 	}
 	return json.Marshal(toSerialize)
 }

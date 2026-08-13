@@ -7389,6 +7389,18 @@ export interface components {
         AppConfigResponse: {
             /** @description True when GitHub OAuth login is configured on the server. */
             github_oauth?: boolean;
+            signup?: components["schemas"]["SignupConfigResponse"];
+        };
+        SignupConfigResponse: {
+            turnstile: components["schemas"]["TurnstileConfigResponse"];
+        };
+        TurnstileConfigResponse: {
+            /** @description True when password signup requires a Turnstile challenge. */
+            enabled: boolean;
+            /** @description Public Turnstile site key used to render the signup widget. */
+            site_key: string;
+            /** @description Turnstile action submitted by the signup widget. */
+            action: string;
         };
         Organisation: {
             id?: string;
@@ -7463,6 +7475,8 @@ export interface components {
             organisation?: components["schemas"]["Organisation"];
             /** @description Optional invite token for joining an existing organization */
             invite_token?: string;
+            /** @description Turnstile token required for protected public password signup */
+            turnstile_token?: string;
         };
         /** @enum {string} */
         UserRole: "OrgAdmin" | "OrgMember";

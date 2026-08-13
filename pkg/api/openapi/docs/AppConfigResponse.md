@@ -5,6 +5,7 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **GithubOauth** | Pointer to **bool** | True when GitHub OAuth login is configured on the server. | [optional] 
+**Signup** | Pointer to [**SignupConfigResponse**](SignupConfigResponse.md) |  | [optional] 
 
 ## Methods
 
@@ -49,6 +50,31 @@ SetGithubOauth sets GithubOauth field to given value.
 `func (o *AppConfigResponse) HasGithubOauth() bool`
 
 HasGithubOauth returns a boolean if a field has been set.
+
+### GetSignup
+
+`func (o *AppConfigResponse) GetSignup() SignupConfigResponse`
+
+GetSignup returns the Signup field if non-nil, zero value otherwise.
+
+### GetSignupOk
+
+`func (o *AppConfigResponse) GetSignupOk() (*SignupConfigResponse, bool)`
+
+GetSignupOk returns a tuple with the Signup field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetSignup
+
+`func (o *AppConfigResponse) SetSignup(v SignupConfigResponse)`
+
+SetSignup sets Signup field to given value.
+
+### HasSignup
+
+`func (o *AppConfigResponse) HasSignup() bool`
+
+HasSignup returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

@@ -6156,10 +6156,49 @@ components:
     AppConfigResponse:
       example:
         github_oauth: true
+        signup:
+          turnstile:
+            site_key: site_key
+            action: action
+            enabled: true
       properties:
         github_oauth:
           description: True when GitHub OAuth login is configured on the server.
           type: boolean
+        signup:
+          $ref: '#/components/schemas/SignupConfigResponse'
+      type: object
+    SignupConfigResponse:
+      example:
+        turnstile:
+          site_key: site_key
+          action: action
+          enabled: true
+      properties:
+        turnstile:
+          $ref: '#/components/schemas/TurnstileConfigResponse'
+      required:
+      - turnstile
+      type: object
+    TurnstileConfigResponse:
+      example:
+        site_key: site_key
+        action: action
+        enabled: true
+      properties:
+        enabled:
+          description: True when password signup requires a Turnstile challenge.
+          type: boolean
+        site_key:
+          description: Public Turnstile site key used to render the signup widget.
+          type: string
+        action:
+          description: Turnstile action submitted by the signup widget.
+          type: string
+      required:
+      - action
+      - enabled
+      - site_key
       type: object
     Organisation:
       example:
@@ -6374,6 +6413,7 @@ components:
           created_at: 2000-01-23T04:56:07.000+00:00
           id: id
         invite_token: invite_token
+        turnstile_token: turnstile_token
         email: email
       properties:
         name:
@@ -6390,6 +6430,9 @@ components:
           $ref: '#/components/schemas/Organisation'
         invite_token:
           description: Optional invite token for joining an existing organization
+          type: string
+        turnstile_token:
+          description: Turnstile token required for protected public password signup
           type: string
       required:
       - email

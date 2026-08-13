@@ -1,0 +1,14 @@
+# Uptime Kuma — self-hosted uptime/status monitoring (SQLite).
+# First visit shows the setup wizard; create the admin account there.
+name: uptime-kuma
+
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:2.5.0
+    ports:
+      - "3001:3001"
+    volumes:
+      - uptime-kuma-data:/app/data
+
+volumes:
+  uptime-kuma-data:
