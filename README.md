@@ -3,8 +3,7 @@
 </p>
 
 <p align="center">
-  The deployment platform for coding agents and humans.<br>
-  Ship from your agent, the CLI, or the Canvas. Self-host it, or run on our cloud.
+  Ship using agents, the Canvas, or the CLI. Self-host it, or run on our cloud.
 </p>
 
 <p align="center">
