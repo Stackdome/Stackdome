@@ -1,0 +1,9 @@
+/* Mintlify caps the nav logo at h-6 (24px), which renders the wordmark at
+   about 12px against 16px sidebar labels. !important because h-6 is a
+   utility class on the element itself. */
+.nav-logo { height: 30px !important; }
+
+/* The cube reaches higher than the wordmark, so centring the lockup by its
+   bounding box leaves the text sitting low against the theme toggles beside
+   it. Percentage of the element, so it holds if the height changes. */
+.nav-logo { transform: translateY(-8.7%); }

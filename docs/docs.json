@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
+  "theme": "maple",
   "name": "Stackdome",
   "description": "Deploy, debug, and operate applications with coding agents, the Stackdome CLI, or the dashboard. Start on Stackdome Cloud or connect a self-hosted installation.",
   "favicon": {
@@ -12,9 +12,31 @@
     "dark": "/logo/dark.svg"
   },
   "colors": {
-    "primary": "#0F172A",
-    "light": "#7C93B8",
-    "dark": "#7C93B8"
+    "primary": "#191714",
+    "light": "#F1EEE8",
+    "dark": "#8B8579"
+  },
+  "fonts": {
+    "heading": { "family": "Geist", "weight": 600 },
+    "body": { "family": "Geist", "weight": 400 }
+  },
+  "background": {
+    "color": { "light": "#F5F4F1", "dark": "#131210" }
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg",
+    "href": "https://stackdome.io"
+  },
+  "favicon": "/favicon.svg",
+  "appearance": { "default": "system" },
+  "styling": {
+    "codeblocks": { "theme": { "light": "vitesse-light", "dark": "vitesse-dark" } }
+  },
+  "thumbnails": {
+    "appearance": "light",
+    "background": "/images/sky-card.png",
+    "fonts": { "family": "Geist" }
   },
   "markdown": {
     "instructions": [
