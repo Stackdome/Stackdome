@@ -4,7 +4,7 @@
 #    (must match).
 # 3. Point the Voltius desktop/mobile app at this instance's public URL.
 # 4. Email verification and team invites silently no-op without a Resend API key —
-#    accounts still work, users just won't receive mail. See docs.voltius.app/self-hosting.
+#    accounts still work, users just won't receive mail. See https://docs.voltius.app/self-hosting/.
 name: voltius
 
 services:
