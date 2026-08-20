@@ -1,0 +1,35 @@
+# Voltius — self-hosted budget & expense sync server (Postgres).
+# 1. Replace REPLACE_JWT_SECRET_VALUE_HERE (generate with `openssl rand -hex 32`).
+# 2. Replace REPLACE_POSTGRES_PASSWORD_VALUE_HERE in BOTH db and server's DATABASE_URL
+#    (must match).
+# 3. Point the Voltius desktop/mobile app at this instance's public URL.
+# 4. Email verification and team invites silently no-op without a Resend API key —
+#    accounts still work, users just won't receive mail. See https://docs.voltius.app/self-hosting/.
+name: voltius
+
+services:
+  server:
+    image: ghcr.io/voltiusapp/voltius-server:latest
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: "postgres://voltius:REPLACE_POSTGRES_PASSWORD_VALUE_HERE@db/voltius"
+      JWT_SECRET: "REPLACE_JWT_SECRET_VALUE_HERE"
+      PORT: "8080"
+      RUST_LOG: "info"
+
+  db:
+    image: postgres:16-alpine
+    expose:
+      - "5432"
+    volumes:
+      - voltius-db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: "voltius"
+      POSTGRES_PASSWORD: "REPLACE_POSTGRES_PASSWORD_VALUE_HERE"
+      POSTGRES_DB: "voltius"
+
+volumes:
+  voltius-db-data:
