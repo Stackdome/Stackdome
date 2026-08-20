@@ -10,6 +10,7 @@ import { uptimeKuma } from "@/pages/stacks/data/templates/uptime-kuma/template";
 import { librechat } from "@/pages/stacks/data/templates/librechat/template";
 import { twenty } from "@/pages/stacks/data/templates/twenty/template";
 import { umami } from "@/pages/stacks/data/templates/umami/template";
+import { voltius } from "@/pages/stacks/data/templates/voltius/template";
 
 /** Curated templates shown in the Templates Browser. Add a template by dropping a folder and listing it here. */
 export const templates: Template[] = [
@@ -24,6 +25,7 @@ export const templates: Template[] = [
   umami,
   librechat,
   twenty,
+  voltius,
 ];
 
 export function getTemplateById(id: string): Template | undefined {
