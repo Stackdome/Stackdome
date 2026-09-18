@@ -14,34 +14,6 @@ import (
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
 )
 
-func TestShouldEnableTLS(t *testing.T) {
-	tests := []struct {
-		name string
-		fqdn string
-		want bool
-	}{
-		{"empty string", "", false},
-		{"nip.io subdomain", "app.192-168-1-1.nip.io", false},
-		{"sslip.io subdomain", "app.10-0-0-1.sslip.io", false},
-		{"dot local", "myapp.local", false},
-		{"dot localhost", "myapp.localhost", false},
-		{"real domain", "app.example.com", true},
-		{"subdomain", "api.staging.example.com", true},
-		{"bare domain", "example.com", true},
-		{"io TLD not matching nip.io", "myapp.io", true},
-		{"domain ending in local but not .local suffix", "app.mylocal", true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := shouldEnableTLS(tt.fqdn)
-			if got != tt.want {
-				t.Errorf("shouldEnableTLS(%q) = %v, want %v", tt.fqdn, got, tt.want)
-			}
-		})
-	}
-}
-
 func TestHasCertManagerTLSPorts(t *testing.T) {
 	tests := []struct {
 		name string
@@ -157,8 +129,10 @@ var _ = Describe("clusterResourceBuilder platform wildcard TLS", func() {
 				fqdn = "api.customer.example.com"
 			}
 			builder := NewClusterResourceBuilder(ClusterResourceBuilderSpec{
-				ComputeMode:        computeMode,
-				PlatformTLSEnabled: platformTLSEnabled,
+				PublicEndpoints: models.PublicEndpointConfig{
+					SharedCompute:      computeMode == config.ComputeModeShared,
+					PlatformTLSEnabled: platformTLSEnabled,
+				},
 				PlatformBaseDomain: "cloud.stackdome.com",
 			})
 			resource := &models.StackResource{
