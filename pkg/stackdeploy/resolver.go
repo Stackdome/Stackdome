@@ -36,12 +36,14 @@ func (e DependencyNotReadyError) Error() string {
 }
 
 type ResolverSpec struct {
+	PublicEndpoints      models.PublicEndpointConfig
 	VolumeService        VolumeService
 	PostgresAddonService PostgresAddonService
 	SecretService        SecretService
 }
 
 type Resolver struct {
+	publicEndpoints      models.PublicEndpointConfig
 	volumeService        VolumeService
 	postgresAddonService PostgresAddonService
 	secretService        SecretService
@@ -49,6 +51,7 @@ type Resolver struct {
 
 func NewResolver(spec ResolverSpec) *Resolver {
 	return &Resolver{
+		publicEndpoints:      spec.PublicEndpoints,
 		volumeService:        spec.VolumeService,
 		postgresAddonService: spec.PostgresAddonService,
 		secretService:        spec.SecretService,
@@ -65,7 +68,7 @@ func (r *Resolver) Resolve(ctx context.Context, stack *models.Stack) (*models.St
 	if err := r.resolveVolumeConnections(ctx, effective); err != nil {
 		return nil, err
 	}
-	if err := resolveSelfOutputEnvVars(effective); err != nil {
+	if err := r.resolveSelfOutputEnvVars(effective); err != nil {
 		return nil, err
 	}
 	if err := r.resolveEnvConnections(ctx, effective); err != nil {
