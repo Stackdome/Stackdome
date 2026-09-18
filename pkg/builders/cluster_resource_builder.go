@@ -7,7 +7,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Stackdome/stackdome/config"
 	"github.com/Stackdome/stackdome/pkg/credentials"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/davecgh/go-spew/spew"
@@ -29,8 +28,7 @@ type ClusterResourceBuilder interface {
 type clusterResourceBuilder struct {
 	credentialResolver credentials.Resolver
 	platformBaseDomain string
-	computeMode        config.ComputeMode
-	platformTLSEnabled bool
+	publicEndpoints    models.PublicEndpointConfig
 }
 
 type ClusterResourceBuilderSpec struct {
@@ -38,16 +36,14 @@ type ClusterResourceBuilderSpec struct {
 	// auto-attach to image pull / push specs.
 	CredentialResolver credentials.Resolver
 	PlatformBaseDomain string
-	ComputeMode        config.ComputeMode
-	PlatformTLSEnabled bool
+	PublicEndpoints    models.PublicEndpointConfig
 }
 
 func NewClusterResourceBuilder(spec ClusterResourceBuilderSpec) ClusterResourceBuilder {
 	return &clusterResourceBuilder{
 		credentialResolver: spec.CredentialResolver,
 		platformBaseDomain: spec.PlatformBaseDomain,
-		computeMode:        spec.ComputeMode,
-		platformTLSEnabled: spec.PlatformTLSEnabled,
+		publicEndpoints:    spec.PublicEndpoints,
 	}
 }
 
@@ -488,16 +484,12 @@ func (b *clusterResourceBuilder) setPorts(resourceSpecCr *corev1alpha1.StackReso
 	if len(stackResource.Ports) > 0 {
 		resourceSpecCr.Ports = make([]corev1alpha1.Port, len(stackResource.Ports))
 		for i, port := range stackResource.Ports {
-			tlsEnabled := port.ExposedToPublic && shouldEnableTLS(port.ExposedFqdn)
-			if b.computeMode == config.ComputeModeShared && !b.platformTLSEnabled {
-				tlsEnabled = false
-			}
 			resourceSpecCr.Ports[i] = corev1alpha1.Port{
 				Name:           port.Name,
 				Number:         int32(port.Number),
 				Protocol:       strings.ToLower(port.Protocol),
 				ExposeToPublic: port.ExposedToPublic,
-				TLS:            tlsEnabled,
+				TLS:            b.publicEndpoints.UsesTLS(port),
 			}
 			if port.ExposedToPublic {
 				resourceSpecCr.Ports[i].FQDN = port.ExposedFqdn
@@ -520,19 +512,6 @@ func isDirectChildOfBaseDomain(fqdn, baseDomain string) bool {
 
 	child, found := strings.CutSuffix(fqdn, "."+baseDomain)
 	return found && child != "" && !strings.Contains(child, ".")
-}
-
-func shouldEnableTLS(fqdn string) bool {
-	if fqdn == "" {
-		return false
-	}
-	nonTLSDomains := []string{".nip.io", ".sslip.io", ".local", ".localhost"}
-	for _, suffix := range nonTLSDomains {
-		if strings.HasSuffix(fqdn, suffix) {
-			return false
-		}
-	}
-	return true
 }
 
 func setEnvVars(resourceSpecCr *corev1alpha1.StackResourceSpec, stackResource *models.StackResource) {
