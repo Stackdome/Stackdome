@@ -980,6 +980,10 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		Logger:         e.Logger,
 	})
 
+	publicEndpoints := models.PublicEndpointConfig{
+		SharedCompute:      e.Config.ComputeMode == config.ComputeModeShared,
+		PlatformTLSEnabled: e.PlatformConfig.PlatformTLSEnabled,
+	}
 	releaseWorker := releaseworker.NewReleaseWorker(releaseworker.ReleaseWorkerSpec{
 		ReleaseService:       e.Services.StackReleaseService,
 		EventRecorder:        e.Services.ReleaseEventRecorder,
@@ -992,12 +996,12 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		VolumeService:        e.Services.VolumeService,
 		CRBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{
 			CredentialResolver: e.Services.CredentialResolver,
-			ComputeMode:        e.Config.ComputeMode,
-			PlatformTLSEnabled: e.PlatformConfig.PlatformTLSEnabled,
+			PublicEndpoints:    publicEndpoints,
 			PlatformBaseDomain: e.PlatformConfig.BaseDomain,
 		}),
 		SecretBuilder: builders.NewSecretBuilder(builders.SecretBuilderSpec{}),
 		Resolver: stackdeploy.NewResolver(stackdeploy.ResolverSpec{
+			PublicEndpoints:      publicEndpoints,
 			VolumeService:        e.Services.VolumeService,
 			PostgresAddonService: e.Services.PostgresAddonService,
 			SecretService:        e.Services.SecretService,
