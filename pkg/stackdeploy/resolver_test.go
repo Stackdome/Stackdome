@@ -37,8 +37,89 @@ func TestResolveDoesNotMutateInputStack(t *testing.T) {
 	effective, err := resolver.Resolve(context.Background(), stack)
 
 	g.Expect(err).NotTo(HaveOccurred())
-	g.Expect(effective.StackResources[0].ExecutionConfig.Env[0].Value).To(Equal("http://api.example.com"))
+	g.Expect(effective.StackResources[0].ExecutionConfig.Env[0].Value).To(Equal("https://api.example.com"))
 	g.Expect(stack.StackResources[0].ExecutionConfig.Env[0].Value).To(Equal(""))
+}
+
+func TestResolvePublicURLsMatchIngressTLS(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		config  models.PublicEndpointConfig
+		fqdn    string
+		wantTLS bool
+	}{
+		{"BYOC HTTPS", models.PublicEndpointConfig{}, "api.example.com", true},
+		{"BYOC HTTP", models.PublicEndpointConfig{}, "api.127-0-0-1.nip.io", false},
+		{"shared HTTPS", models.PublicEndpointConfig{SharedCompute: true, PlatformTLSEnabled: true}, "api.app.stackdome.com", true},
+		{"shared HTTP", models.PublicEndpointConfig{SharedCompute: true}, "api.app.stackdome.com", false},
+	} {
+		for _, layout := range []string{"single", "multiple"} {
+			t.Run(tc.name+"/"+layout, func(t *testing.T) {
+				g := NewWithT(t)
+				api := &models.StackResource{
+					ID: "res-api", Name: "api", Namespace: "app",
+					Ports: models.Ports{
+						{Name: "http", Number: 8080, Protocol: models.PortProtocolHTTP, ExposedToPublic: true, ExposedFqdn: tc.fqdn},
+					},
+					ExecutionConfig: &models.ExecutionConfig{},
+				}
+				suffix := ""
+				if layout == "multiple" {
+					api.Ports = append(api.Ports, models.Port{Name: "local", Number: 9090, Protocol: models.PortProtocolHTTP, ExposedToPublic: true, ExposedFqdn: "api.local"})
+					suffix = ".http"
+					api.ExecutionConfig.Env = append(api.ExecutionConfig.Env, models.EnvVar{Name: "LOCAL_URL", SelfOutput: models.OutputNamePublicURL + ".local"})
+				}
+				api.ExecutionConfig.Env = append(api.ExecutionConfig.Env,
+					models.EnvVar{Name: "PUBLIC_URL", SelfOutput: models.OutputNamePublicURL + suffix},
+					models.EnvVar{Name: "INTERNAL_URL", SelfOutput: models.OutputNameURL + suffix},
+				)
+				stack := &models.Stack{
+					ID: "stack-1",
+					StackResources: []*models.StackResource{
+						api,
+						{ID: "res-web", Name: "web", ExecutionConfig: &models.ExecutionConfig{}},
+					},
+					Connections: models.StackConnections{
+						{
+							ID:   "api-web",
+							Kind: models.ConnectionKindEnv,
+							From: models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "api"},
+							To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
+							Mappings: []models.ConnectionMapping{
+								{
+									Target: models.ConnectionTarget{Type: models.ConnectionTargetTypeEnv, Name: "API_URL"},
+									Value:  models.ValueRef{Output: models.OutputNamePublicURL + suffix},
+								},
+								{
+									Target: models.ConnectionTarget{Type: models.ConnectionTargetTypeEnv, Name: "API_CALLBACK"},
+									Value: models.ValueRef{
+										Template: "{{url}}/callback",
+										Values:   map[string]models.OutputValueRef{"url": {Output: models.OutputNamePublicURL + suffix}},
+									},
+								},
+							},
+						},
+					},
+				}
+
+				resolver := NewResolver(ResolverSpec{PublicEndpoints: tc.config})
+				effective, err := resolver.Resolve(context.Background(), stack)
+				g.Expect(err).NotTo(HaveOccurred())
+
+				wantURL := "http://" + tc.fqdn
+				if tc.wantTLS {
+					wantURL = "https://" + tc.fqdn
+				}
+				g.Expect(envValue(effective, "api", "PUBLIC_URL")).To(Equal(wantURL))
+				g.Expect(envValue(effective, "api", "INTERNAL_URL")).To(Equal("http://api.app.svc:8080"))
+				g.Expect(envValue(effective, "web", "API_URL")).To(Equal(wantURL))
+				g.Expect(envValue(effective, "web", "API_CALLBACK")).To(Equal(wantURL + "/callback"))
+				if layout == "multiple" {
+					g.Expect(envValue(effective, "api", "LOCAL_URL")).To(Equal("http://api.local"))
+				}
+			})
+		}
+	}
 }
 
 func TestResolveFailsOnUnknownSelfOutput(t *testing.T) {
@@ -173,7 +254,7 @@ func TestResolveStackResourceEnvConnection(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(envValue(effective, "web", "API_HOST")).To(Equal("api.default.svc"))
 	g.Expect(envValue(effective, "web", "API_URL")).To(Equal("http://api.default.svc:8080"))
-	g.Expect(envValue(effective, "web", "API_PUBLIC_URL")).To(Equal("http://api.example.com"))
+	g.Expect(envValue(effective, "web", "API_PUBLIC_URL")).To(Equal("https://api.example.com"))
 	g.Expect(envValue(effective, "web", "API_TEMPLATE_URL")).To(Equal("http://api.example.com:8080"))
 	g.Expect(len(stack.StackResources[1].ExecutionConfig.Env)).To(Equal(0))
 }
