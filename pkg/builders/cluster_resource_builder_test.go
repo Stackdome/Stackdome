@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Stackdome/stackdome/config"
 	"github.com/Stackdome/stackdome/pkg/credentials"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
@@ -13,34 +12,6 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
 )
-
-func TestShouldEnableTLS(t *testing.T) {
-	tests := []struct {
-		name string
-		fqdn string
-		want bool
-	}{
-		{"empty string", "", false},
-		{"nip.io subdomain", "app.192-168-1-1.nip.io", false},
-		{"sslip.io subdomain", "app.10-0-0-1.sslip.io", false},
-		{"dot local", "myapp.local", false},
-		{"dot localhost", "myapp.localhost", false},
-		{"real domain", "app.example.com", true},
-		{"subdomain", "api.staging.example.com", true},
-		{"bare domain", "example.com", true},
-		{"io TLD not matching nip.io", "myapp.io", true},
-		{"domain ending in local but not .local suffix", "app.mylocal", true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := shouldEnableTLS(tt.fqdn)
-			if got != tt.want {
-				t.Errorf("shouldEnableTLS(%q) = %v, want %v", tt.fqdn, got, tt.want)
-			}
-		})
-	}
-}
 
 func TestHasCertManagerTLSPorts(t *testing.T) {
 	tests := []struct {
@@ -151,14 +122,16 @@ var _ = Describe("clusterResourceBuilder platform wildcard TLS", func() {
 	)
 
 	DescribeTable("applies the shared compute TLS policy",
-		func(computeMode config.ComputeMode, platformTLSEnabled, wantTLS bool) {
+		func(sharedCompute, platformTLSEnabled, wantTLS bool) {
 			fqdn := "api-1234abcd.cloud.stackdome.com"
-			if computeMode == config.ComputeModeBYOC {
+			if !sharedCompute {
 				fqdn = "api.customer.example.com"
 			}
 			builder := NewClusterResourceBuilder(ClusterResourceBuilderSpec{
-				ComputeMode:        computeMode,
-				PlatformTLSEnabled: platformTLSEnabled,
+				PublicEndpoints: models.PublicEndpointConfig{
+					SharedCompute:      sharedCompute,
+					PlatformTLSEnabled: platformTLSEnabled,
+				},
 				PlatformBaseDomain: "cloud.stackdome.com",
 			})
 			resource := &models.StackResource{
@@ -185,9 +158,9 @@ var _ = Describe("clusterResourceBuilder platform wildcard TLS", func() {
 				Expect(cr.Annotations).NotTo(HaveKey(corev1alpha1.ClusterIssuerAnnotation))
 			}
 		},
-		Entry("shared platform domain with TLS enabled", config.ComputeModeShared, true, true),
-		Entry("shared platform domain with TLS disabled", config.ComputeModeShared, false, false),
-		Entry("BYOC custom domain keeps TLS behavior", config.ComputeModeBYOC, false, true),
+		Entry("shared platform domain with TLS enabled", true, true, true),
+		Entry("shared platform domain with TLS disabled", true, false, false),
+		Entry("BYOC custom domain keeps TLS behavior", false, false, true),
 	)
 
 	It("keeps the cert-manager Issuer for a resource with platform and custom TLS ports", func() {
