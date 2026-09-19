@@ -65,7 +65,7 @@ func stackResourceOutputKey(base, portName string, multiPort bool) string {
 	return base + "." + portName
 }
 
-func (r *StackResource) ToOutputMap() map[string]string {
+func (r *StackResource) ToOutputMap(publicEndpoints PublicEndpointConfig) map[string]string {
 	outputs := make(map[string]string)
 
 	host := r.InternalServiceHost()
@@ -84,7 +84,11 @@ func (r *StackResource) ToOutputMap() map[string]string {
 			continue
 		}
 		outputs[stackResourceOutputKey(OutputNamePublicHost, port.Name, multiPort)] = port.ExposedFqdn
-		outputs[stackResourceOutputKey(OutputNamePublicURL, port.Name, multiPort)] = "http://" + port.ExposedFqdn
+		scheme := "http://"
+		if publicEndpoints.UsesTLS(port) {
+			scheme = "https://"
+		}
+		outputs[stackResourceOutputKey(OutputNamePublicURL, port.Name, multiPort)] = scheme + port.ExposedFqdn
 	}
 
 	return outputs

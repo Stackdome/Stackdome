@@ -7,20 +7,20 @@ import (
 	"github.com/Stackdome/stackdome/pkg/models"
 )
 
-func resolveSelfOutputEnvVars(stack *models.Stack) error {
+func (r *Resolver) resolveSelfOutputEnvVars(stack *models.Stack) error {
 	for _, resource := range stack.StackResources {
-		if err := resolveSelfOutputsForResource(resource); err != nil {
+		if err := r.resolveSelfOutputsForResource(resource); err != nil {
 			return fmt.Errorf("failed to resolve self output env vars for resource '%s': %w", resource.Name, err)
 		}
 	}
 	return nil
 }
 
-func resolveSelfOutputsForResource(resource *models.StackResource) error {
+func (r *Resolver) resolveSelfOutputsForResource(resource *models.StackResource) error {
 	if resource.ExecutionConfig == nil {
 		return nil
 	}
-	outputs := resource.ToOutputMap()
+	outputs := resource.ToOutputMap(r.publicEndpoints)
 	for i := range resource.ExecutionConfig.Env {
 		if resource.ExecutionConfig.Env[i].SelfOutput == "" {
 			continue
@@ -81,7 +81,7 @@ func (r *Resolver) resolveConnectionEnvVars(
 		if !ok {
 			return nil, fmt.Errorf("stack resource connection '%s' references unknown resource '%s'", connection.ID, connection.From.Name)
 		}
-		resolved, err := resolveConnectionMappings(connection, sourceResource.ToOutputMap())
+		resolved, err := resolveConnectionMappings(connection, sourceResource.ToOutputMap(r.publicEndpoints))
 		if err != nil {
 			return nil, err
 		}
