@@ -961,13 +961,18 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		Metrics:     e.Observability,
 	})
 
+	resourceValidationRecordStore := pgstore.NewResourceValidationRecordStore(pgstore.ResourceValidationRecordStoreSpec{
+		SessionFactory: e.DBSession,
+	})
+
 	stackWorker := stack.NewStackWorker(stack.StackWorkerSpec{
-		StackService:     e.Services.StackService,
-		SecretService:    e.Services.SecretService,
-		ClusterManager:   e.ClusterManager,
-		VolumeService:    e.Services.VolumeService,
-		NamespaceService: e.Services.NamespaceService,
-		Env:              e.Name,
+		StackService:      e.Services.StackService,
+		SecretService:     e.Services.SecretService,
+		ClusterManager:    e.ClusterManager,
+		VolumeService:     e.Services.VolumeService,
+		NamespaceService:  e.Services.NamespaceService,
+		ValidationRecords: resourceValidationRecordStore,
+		Env:               e.Name,
 	})
 
 	e.WorkerManager.RegisterWorker(stackWorker, models.StackOperand{})
@@ -1002,9 +1007,7 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 			PostgresAddonService: e.Services.PostgresAddonService,
 			SecretService:        e.Services.SecretService,
 		}),
-		ValidationRecords: pgstore.NewResourceValidationRecordStore(pgstore.ResourceValidationRecordStoreSpec{
-			SessionFactory: e.DBSession,
-		}),
+		ValidationRecords:     resourceValidationRecordStore,
 		ReleaseWorkerEnqueuer: e.WorkerManager,
 		ImageRegistryStore:    clusterImageRegistryStore,
 		ImageRegistryResource: clusterImageRegistryResource,

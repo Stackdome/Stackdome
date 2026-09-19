@@ -86,4 +86,5 @@ var MigrationList = []*gormigrate.Migration{
 	addClusterDeletionTimestamp(),
 	dropWorkspaceUserTables(),
 	createComputeAccess(),
+	addResourceValidationRecordsStackForeignKey(),
 }

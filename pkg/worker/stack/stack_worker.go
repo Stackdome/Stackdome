@@ -8,6 +8,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/stores"
 	"github.com/Stackdome/stackdome/pkg/worker"
 )
 
@@ -23,12 +24,13 @@ type stackWorker struct {
 }
 
 type StackWorkerSpec struct {
-	StackService     stackService
-	SecretService    secretService
-	VolumeService    volumeService
-	NamespaceService namespaceService
-	Env              string
-	ClusterManager   clustermanager.ClusterManager
+	StackService      stackService
+	SecretService     secretService
+	VolumeService     volumeService
+	NamespaceService  namespaceService
+	ValidationRecords stores.ResourceValidationRecordStore
+	Env               string
+	ClusterManager    clustermanager.ClusterManager
 }
 
 func NewStackWorker(spec StackWorkerSpec) worker.Worker {
@@ -38,12 +40,13 @@ func NewStackWorker(spec StackWorkerSpec) worker.Worker {
 		BaseWorker:     worker.NewBaseWorker(StackWorkerName, spec.Env),
 		subReconcilers: []subReconciler{
 			NewDeprovisionReconciler(DeprovisionReconcilerSpec{
-				StackService:     spec.StackService,
-				SecretService:    spec.SecretService,
-				NamespaceService: spec.NamespaceService,
-				Logger:           logger.NewLoggerWithPrefix(context.Background(), "stack-deprovision-reconciler"),
-				VolumeService:    spec.VolumeService,
-				ClusterManager:   spec.ClusterManager,
+				StackService:      spec.StackService,
+				SecretService:     spec.SecretService,
+				NamespaceService:  spec.NamespaceService,
+				Logger:            logger.NewLoggerWithPrefix(context.Background(), "stack-deprovision-reconciler"),
+				VolumeService:     spec.VolumeService,
+				ValidationRecords: spec.ValidationRecords,
+				ClusterManager:    spec.ClusterManager,
 			}),
 			NewNamespaceReconciler(NamespaceReconcilerSpec{
 				ClusterManager:   spec.ClusterManager,

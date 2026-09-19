@@ -105,4 +105,27 @@ var _ = Describe("ResourceValidationRecordStore", func() {
 		Expect(err).To(BeNil())
 		Expect(got.Fingerprint).To(Equal("sha256:push"))
 	})
+
+	It("deletes every record for a stack and leaves other stacks untouched", func() {
+		for _, record := range []*models.ResourceValidationRecord{
+			{StackID: stackID, ResourceName: "web", CheckKind: models.ValidationCheckImagePull, Fingerprint: "sha256:web", ValidatedAt: time.Now().UTC()},
+			{StackID: stackID, ResourceName: "worker", CheckKind: models.ValidationCheckImagePull, Fingerprint: "sha256:worker", ValidatedAt: time.Now().UTC()},
+			{StackID: "stack-2", ResourceName: "web", CheckKind: models.ValidationCheckImagePull, Fingerprint: "sha256:other", ValidatedAt: time.Now().UTC()},
+		} {
+			Expect(store.Upsert(ctx, record)).To(BeNil())
+		}
+
+		Expect(store.DeleteByStack(ctx, stackID)).To(BeNil())
+
+		_, err := store.Get(ctx, stackID, "web", models.ValidationCheckImagePull)
+		Expect(err).NotTo(BeNil())
+		Expect(err.Is404()).To(BeTrue())
+		_, err = store.Get(ctx, stackID, "worker", models.ValidationCheckImagePull)
+		Expect(err).NotTo(BeNil())
+		Expect(err.Is404()).To(BeTrue())
+
+		got, err := store.Get(ctx, "stack-2", "web", models.ValidationCheckImagePull)
+		Expect(err).To(BeNil())
+		Expect(got.Fingerprint).To(Equal("sha256:other"))
+	})
 })
