@@ -42,6 +42,20 @@ func (m *MockResourceValidationRecordStore) EXPECT() *MockResourceValidationReco
 	return m.recorder
 }
 
+// DeleteByStack mocks base method.
+func (m *MockResourceValidationRecordStore) DeleteByStack(ctx context.Context, stackID string) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteByStack", ctx, stackID)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// DeleteByStack indicates an expected call of DeleteByStack.
+func (mr *MockResourceValidationRecordStoreMockRecorder) DeleteByStack(ctx, stackID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteByStack", reflect.TypeOf((*MockResourceValidationRecordStore)(nil).DeleteByStack), ctx, stackID)
+}
+
 // Get mocks base method.
 func (m *MockResourceValidationRecordStore) Get(ctx context.Context, stackID, resourceName string, kind models.ResourceValidationCheckKind) (*models.ResourceValidationRecord, *errors.ServiceError) {
 	m.ctrl.T.Helper()

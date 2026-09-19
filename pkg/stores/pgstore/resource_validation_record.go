@@ -50,3 +50,12 @@ func (s *resourceValidationRecordStore) Upsert(ctx context.Context, record *mode
 	}
 	return nil
 }
+
+func (s *resourceValidationRecordStore) DeleteByStack(ctx context.Context, stackID string) *errors.ServiceError {
+	if err := s.sessionFactory.New(ctx).
+		Where("stack_id = ?", stackID).
+		Delete(&models.ResourceValidationRecord{}).Error; err != nil {
+		return errors.GeneralError("failed to delete resource validation records for stack '%s': %s", stackID, err.Error())
+	}
+	return nil
+}

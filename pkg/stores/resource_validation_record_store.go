@@ -11,4 +11,5 @@ import (
 type ResourceValidationRecordStore interface {
 	Get(ctx context.Context, stackID, resourceName string, kind models.ResourceValidationCheckKind) (*models.ResourceValidationRecord, *errors.ServiceError)
 	Upsert(ctx context.Context, record *models.ResourceValidationRecord) *errors.ServiceError
+	DeleteByStack(ctx context.Context, stackID string) *errors.ServiceError
 }
