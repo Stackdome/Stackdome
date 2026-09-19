@@ -37,7 +37,7 @@ func TestResolveDoesNotMutateInputStack(t *testing.T) {
 	effective, err := resolver.Resolve(context.Background(), stack)
 
 	g.Expect(err).NotTo(HaveOccurred())
-	g.Expect(effective.StackResources[0].ExecutionConfig.Env[0].Value).To(Equal("http://api.example.com"))
+	g.Expect(effective.StackResources[0].ExecutionConfig.Env[0].Value).To(Equal("https://api.example.com"))
 	g.Expect(stack.StackResources[0].ExecutionConfig.Env[0].Value).To(Equal(""))
 }
 
@@ -173,7 +173,7 @@ func TestResolveStackResourceEnvConnection(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(envValue(effective, "web", "API_HOST")).To(Equal("api.default.svc"))
 	g.Expect(envValue(effective, "web", "API_URL")).To(Equal("http://api.default.svc:8080"))
-	g.Expect(envValue(effective, "web", "API_PUBLIC_URL")).To(Equal("http://api.example.com"))
+	g.Expect(envValue(effective, "web", "API_PUBLIC_URL")).To(Equal("https://api.example.com"))
 	g.Expect(envValue(effective, "web", "API_TEMPLATE_URL")).To(Equal("http://api.example.com:8080"))
 	g.Expect(len(stack.StackResources[1].ExecutionConfig.Env)).To(Equal(0))
 }
