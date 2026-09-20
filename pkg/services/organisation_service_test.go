@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -223,6 +224,84 @@ var _ = Describe("OrganisationService custom-domain admission", func() {
 
 		Expect(updated).To(BeNil())
 		Expect(serr.Reason).To(Equal(customDomainsDisabledInRuntime))
+	})
+})
+
+var _ = Describe("OrganisationService.Update name validation", func() {
+	var (
+		ctrl        *gomock.Controller
+		store       *mocks.MockOrganisationStore
+		domains     *mocks.MockOrganisationDomainsService
+		permissions *mocks.MockPermissionService
+		svc         *organisationService
+		ctx         context.Context
+		existing    *models.Organisation
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		ctx = context.Background()
+		store = mocks.NewMockOrganisationStore(ctrl)
+		domains = mocks.NewMockOrganisationDomainsService(ctrl)
+		permissions = mocks.NewMockPermissionService(ctrl)
+		existing = &models.Organisation{ID: "org-1", Name: "Acme"}
+		svc = &organisationService{
+			organisationStore:         store,
+			organisationDomainService: domains,
+			permissions:               permissions,
+			logger:                    logger.NewLogger(),
+		}
+		permissions.EXPECT().Check(ctx, existing.ID, auth.ResourceOrgs, existing.ID, auth.ActionWrite).Return(nil)
+		permissions.EXPECT().Check(ctx, existing.ID, auth.ResourceOrgs, existing.ID, auth.ActionRead).Return(nil)
+		store.EXPECT().Get(ctx, existing.ID).Return(existing, nil)
+	})
+
+	AfterEach(func() {
+		ctrl.Finish()
+	})
+
+	DescribeTable("rejects junk names before any write",
+		func(name string) {
+			updated, serr := svc.Update(ctx, existing.ID, &models.Organisation{Name: name})
+			Expect(updated).To(BeNil())
+			Expect(serr).ToNot(BeNil())
+			Expect(serr.Code).To(Equal(errors.ErrorBadRequest))
+		},
+		Entry("punctuation only", "-"),
+		Entry("whitespace only", "   "),
+		Entry("too long", strings.Repeat("a", maxOrgNameLength+1)),
+	)
+
+	It("trims and persists a valid rename", func() {
+		renamed := &models.Organisation{ID: existing.ID, Name: "Acme Labs"}
+		store.EXPECT().OrganisationNameExists(ctx, "Acme Labs").Return(false, nil)
+		store.EXPECT().Update(ctx, existing.ID, gomock.Any()).
+			DoAndReturn(func(_ context.Context, _ string, spec *models.Organisation) (*models.Organisation, *errors.ServiceError) {
+				Expect(spec.Name).To(Equal("Acme Labs"))
+				return renamed, nil
+			})
+		domains.EXPECT().ListByOrganisationID(ctx, existing.ID).Return(nil, nil)
+		permissions.EXPECT().Check(ctx, existing.ID, auth.ResourceOrgs, existing.ID, auth.ActionRead).Return(nil)
+		store.EXPECT().Get(ctx, existing.ID).Return(renamed, nil)
+
+		updated, serr := svc.Update(ctx, existing.ID, &models.Organisation{Name: "  Acme Labs  "})
+		Expect(serr).To(BeNil())
+		Expect(updated.Name).To(Equal("Acme Labs"))
+	})
+
+	It("treats an empty name as leave-unchanged", func() {
+		store.EXPECT().Update(ctx, existing.ID, gomock.Any()).
+			DoAndReturn(func(_ context.Context, _ string, spec *models.Organisation) (*models.Organisation, *errors.ServiceError) {
+				Expect(spec.Name).To(Equal(existing.Name))
+				return existing, nil
+			})
+		domains.EXPECT().ListByOrganisationID(ctx, existing.ID).Return(nil, nil)
+		permissions.EXPECT().Check(ctx, existing.ID, auth.ResourceOrgs, existing.ID, auth.ActionRead).Return(nil)
+		store.EXPECT().Get(ctx, existing.ID).Return(existing, nil)
+
+		updated, serr := svc.Update(ctx, existing.ID, &models.Organisation{})
+		Expect(serr).To(BeNil())
+		Expect(updated.Name).To(Equal(existing.Name))
 	})
 })
 

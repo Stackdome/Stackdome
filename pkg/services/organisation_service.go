@@ -237,7 +237,17 @@ func (s *organisationService) Update(ctx context.Context, ID string, spec *model
 		return nil, err
 	}
 
-	if spec.Name != "" && existing.Name != spec.Name {
+	// Empty means "leave the name unchanged"; anything else must pass the
+	// same rule as create/signup so an update can't store a junk name like "-".
+	if spec.Name == "" {
+		spec.Name = existing.Name
+	} else if nameErr := validateOrganisationName(spec.Name); nameErr != nil {
+		return nil, nameErr
+	} else {
+		spec.Name = strings.TrimSpace(spec.Name)
+	}
+
+	if existing.Name != spec.Name {
 		nameExists, err := s.organisationStore.OrganisationNameExists(ctx, spec.Name)
 		if err != nil {
 			s.logger.Error(ctx, "failed to check if organisation name exists: %v", err)
@@ -246,10 +256,6 @@ func (s *organisationService) Update(ctx context.Context, ID string, spec *model
 		if nameExists {
 			return nil, errors.Conflict("organisation with the same name already exists")
 		}
-	}
-
-	if len(spec.Name) == 0 {
-		spec.Name = existing.Name
 	}
 	if s.customDomainsDisabled {
 		existingDomains, domainErr := s.organisationDomainService.ListByOrganisationID(ctx, ID)
