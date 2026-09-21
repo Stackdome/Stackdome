@@ -214,6 +214,24 @@ var _ = Describe("clusterResourceBuilder platform wildcard TLS", func() {
 	})
 })
 
+var _ = Describe("PublicURLScheme", func() {
+	publicPort := func(fqdn string) models.Port {
+		return models.Port{Name: "http", Number: 8080, Protocol: models.PortProtocolHTTP, ExposedToPublic: true, ExposedFqdn: fqdn}
+	}
+
+	DescribeTable("reflects the endpoint TLS configuration",
+		func(port models.Port, computeMode config.ComputeMode, platformTLSEnabled bool, want string) {
+			Expect(PublicURLScheme(port, computeMode, platformTLSEnabled)).To(Equal(want))
+		},
+		Entry("BYOC custom domain uses https", publicPort("api.customer.example.com"), config.ComputeModeBYOC, false, models.OutputURLSchemeHTTPS),
+		Entry("BYOC nip.io domain uses http", publicPort("api.127-0-0-1.nip.io"), config.ComputeModeBYOC, false, models.OutputURLSchemeHTTP),
+		Entry("shared platform domain with TLS enabled uses https", publicPort("api-1234abcd.cloud.stackdome.com"), config.ComputeModeShared, true, models.OutputURLSchemeHTTPS),
+		Entry("shared platform domain with TLS disabled uses http", publicPort("api-1234abcd.cloud.stackdome.com"), config.ComputeModeShared, false, models.OutputURLSchemeHTTP),
+		Entry("private port uses http", models.Port{Name: "http", Number: 8080, Protocol: models.PortProtocolHTTP}, config.ComputeModeBYOC, true, models.OutputURLSchemeHTTP),
+		Entry("empty fqdn uses http", publicPort(""), config.ComputeModeBYOC, true, models.OutputURLSchemeHTTP),
+	)
+})
+
 func TestBuildImageRepositorySpec(t *testing.T) {
 	t.Run("in-cluster registry", func(t *testing.T) {
 		b := &clusterResourceBuilder{}

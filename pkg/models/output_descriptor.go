@@ -26,6 +26,15 @@ const (
 	OutputNamePublicURL     = "public_url"
 )
 
+const (
+	OutputURLSchemeHTTP  = "http"
+	OutputURLSchemeHTTPS = "https"
+)
+
+// PublicURLSchemeFunc returns the scheme of a port's public endpoint. A nil
+// func means HTTP, preserving deployments whose ingress does not terminate TLS.
+type PublicURLSchemeFunc func(port Port) string
+
 type OutputDescriptor struct {
 	Name      string          `json:"name"`
 	Type      OutputValueType `json:"type"`
@@ -65,7 +74,17 @@ func stackResourceOutputKey(base, portName string, multiPort bool) string {
 	return base + "." + portName
 }
 
+// ToOutputMap returns the resource's declared outputs with public URLs using
+// HTTP. Use ToOutputMapWithPublicScheme when the public endpoint scheme is
+// known.
 func (r *StackResource) ToOutputMap() map[string]string {
+	return r.ToOutputMapWithPublicScheme(nil)
+}
+
+// ToOutputMapWithPublicScheme returns the resource's declared outputs. The
+// public_url outputs take their scheme from publicScheme so they reflect the
+// public endpoint's TLS configuration; the internal url output is unaffected.
+func (r *StackResource) ToOutputMapWithPublicScheme(publicScheme PublicURLSchemeFunc) map[string]string {
 	outputs := make(map[string]string)
 
 	host := r.InternalServiceHost()
@@ -84,10 +103,21 @@ func (r *StackResource) ToOutputMap() map[string]string {
 			continue
 		}
 		outputs[stackResourceOutputKey(OutputNamePublicHost, port.Name, multiPort)] = port.ExposedFqdn
-		outputs[stackResourceOutputKey(OutputNamePublicURL, port.Name, multiPort)] = "http://" + port.ExposedFqdn
+		outputs[stackResourceOutputKey(OutputNamePublicURL, port.Name, multiPort)] = publicURL(port, publicScheme)
 	}
 
 	return outputs
+}
+
+// publicURL builds a public endpoint URL. TLS terminates at the public ingress,
+// so the scheme comes from the endpoint configuration rather than the
+// resource's internal protocol.
+func publicURL(port Port, scheme PublicURLSchemeFunc) string {
+	publicScheme := OutputURLSchemeHTTP
+	if scheme != nil {
+		publicScheme = scheme(port)
+	}
+	return publicScheme + "://" + port.ExposedFqdn
 }
 
 func (r *StackResource) InternalServiceHost() string {

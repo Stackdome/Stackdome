@@ -488,10 +488,7 @@ func (b *clusterResourceBuilder) setPorts(resourceSpecCr *corev1alpha1.StackReso
 	if len(stackResource.Ports) > 0 {
 		resourceSpecCr.Ports = make([]corev1alpha1.Port, len(stackResource.Ports))
 		for i, port := range stackResource.Ports {
-			tlsEnabled := port.ExposedToPublic && shouldEnableTLS(port.ExposedFqdn)
-			if b.computeMode == config.ComputeModeShared && !b.platformTLSEnabled {
-				tlsEnabled = false
-			}
+			tlsEnabled := PublicEndpointTLS(port, b.computeMode, b.platformTLSEnabled)
 			resourceSpecCr.Ports[i] = corev1alpha1.Port{
 				Name:           port.Name,
 				Number:         int32(port.Number),
@@ -533,6 +530,29 @@ func shouldEnableTLS(fqdn string) bool {
 		}
 	}
 	return true
+}
+
+// PublicEndpointTLS reports whether a public port's endpoint terminates TLS at
+// the ingress. Wildcard DNS domains (nip.io/sslip.io/.local/.localhost) cannot
+// be issued a certificate, and shared compute only terminates TLS when
+// platform-managed TLS is enabled.
+func PublicEndpointTLS(port models.Port, computeMode config.ComputeMode, platformTLSEnabled bool) bool {
+	if !port.ExposedToPublic {
+		return false
+	}
+	if computeMode == config.ComputeModeShared && !platformTLSEnabled {
+		return false
+	}
+	return shouldEnableTLS(port.ExposedFqdn)
+}
+
+// PublicURLScheme returns the scheme of a public port's endpoint: https when
+// TLS terminates at the ingress, http otherwise.
+func PublicURLScheme(port models.Port, computeMode config.ComputeMode, platformTLSEnabled bool) string {
+	if PublicEndpointTLS(port, computeMode, platformTLSEnabled) {
+		return models.OutputURLSchemeHTTPS
+	}
+	return models.OutputURLSchemeHTTP
 }
 
 func setEnvVars(resourceSpecCr *corev1alpha1.StackResourceSpec, stackResource *models.StackResource) {

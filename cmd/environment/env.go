@@ -980,6 +980,13 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		Logger:         e.Logger,
 	})
 
+	clusterResourceBuilder := builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{
+		CredentialResolver: e.Services.CredentialResolver,
+		ComputeMode:        e.Config.ComputeMode,
+		PlatformTLSEnabled: e.PlatformConfig.PlatformTLSEnabled,
+		PlatformBaseDomain: e.PlatformConfig.BaseDomain,
+	})
+
 	releaseWorker := releaseworker.NewReleaseWorker(releaseworker.ReleaseWorkerSpec{
 		ReleaseService:       e.Services.StackReleaseService,
 		EventRecorder:        e.Services.ReleaseEventRecorder,
@@ -990,17 +997,15 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		CredentialResolver:   e.Services.CredentialResolver,
 		PostgresAddonService: e.Services.PostgresAddonService,
 		VolumeService:        e.Services.VolumeService,
-		CRBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{
-			CredentialResolver: e.Services.CredentialResolver,
-			ComputeMode:        e.Config.ComputeMode,
-			PlatformTLSEnabled: e.PlatformConfig.PlatformTLSEnabled,
-			PlatformBaseDomain: e.PlatformConfig.BaseDomain,
-		}),
-		SecretBuilder: builders.NewSecretBuilder(builders.SecretBuilderSpec{}),
+		CRBuilder:            clusterResourceBuilder,
+		SecretBuilder:        builders.NewSecretBuilder(builders.SecretBuilderSpec{}),
 		Resolver: stackdeploy.NewResolver(stackdeploy.ResolverSpec{
 			VolumeService:        e.Services.VolumeService,
 			PostgresAddonService: e.Services.PostgresAddonService,
 			SecretService:        e.Services.SecretService,
+			PublicURLScheme: func(port models.Port) string {
+				return builders.PublicURLScheme(port, e.Config.ComputeMode, e.PlatformConfig.PlatformTLSEnabled)
+			},
 		}),
 		ValidationRecords: pgstore.NewResourceValidationRecordStore(pgstore.ResourceValidationRecordStoreSpec{
 			SessionFactory: e.DBSession,

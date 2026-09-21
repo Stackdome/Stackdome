@@ -80,4 +80,31 @@ var _ = ginkgo.Describe("StackResource output naming", func() {
 		gomega.Expect(m["url.80"]).To(gomega.Equal("http://mysql:80"))
 		gomega.Expect(m[OutputNamePublicURL+".80"]).To(gomega.Equal("http://web.example.com"))
 	})
+
+	ginkgo.It("defaults public_url to http without an endpoint scheme", func() {
+		r := newResource(Port{Name: "80", Number: 80, Protocol: PortProtocolHTTP, ExposedToPublic: true, ExposedFqdn: "web.example.com"})
+		gomega.Expect(r.ToOutputMap()[OutputNamePublicURL]).To(gomega.Equal("http://web.example.com"))
+	})
+
+	ginkgo.It("uses the endpoint scheme for a TLS single public port", func() {
+		r := newResource(Port{Name: "80", Number: 80, Protocol: PortProtocolHTTP, ExposedToPublic: true, ExposedFqdn: "web.example.com"})
+		m := r.ToOutputMapWithPublicScheme(func(Port) string { return OutputURLSchemeHTTPS })
+		gomega.Expect(m[OutputNamePublicURL]).To(gomega.Equal("https://web.example.com"))
+		gomega.Expect(m[OutputNameURL]).To(gomega.Equal("http://mysql:80"))
+	})
+
+	ginkgo.It("uses the endpoint scheme for every multi-port public_url", func() {
+		r := newResource(
+			Port{Name: "metrics", Number: 9090, Protocol: PortProtocolHTTP, ExposedToPublic: true, ExposedFqdn: "metrics.example.com"},
+			Port{Name: "api", Number: 8080, Protocol: PortProtocolHTTP, ExposedToPublic: true, ExposedFqdn: "api.example.com"},
+		)
+		m := r.ToOutputMapWithPublicScheme(func(port Port) string {
+			if port.ExposedFqdn == "api.example.com" {
+				return OutputURLSchemeHTTPS
+			}
+			return OutputURLSchemeHTTP
+		})
+		gomega.Expect(m[OutputNamePublicURL+".metrics"]).To(gomega.Equal("http://metrics.example.com"))
+		gomega.Expect(m[OutputNamePublicURL+".api"]).To(gomega.Equal("https://api.example.com"))
+	})
 })

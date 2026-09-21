@@ -39,12 +39,16 @@ type ResolverSpec struct {
 	VolumeService        VolumeService
 	PostgresAddonService PostgresAddonService
 	SecretService        SecretService
+	// PublicURLScheme maps a public port to the scheme of its external
+	// endpoint. Nil means HTTP.
+	PublicURLScheme func(port models.Port) string
 }
 
 type Resolver struct {
 	volumeService        VolumeService
 	postgresAddonService PostgresAddonService
 	secretService        SecretService
+	publicURLScheme      func(port models.Port) string
 }
 
 func NewResolver(spec ResolverSpec) *Resolver {
@@ -52,6 +56,7 @@ func NewResolver(spec ResolverSpec) *Resolver {
 		volumeService:        spec.VolumeService,
 		postgresAddonService: spec.PostgresAddonService,
 		secretService:        spec.SecretService,
+		publicURLScheme:      spec.PublicURLScheme,
 	}
 }
 
@@ -65,7 +70,7 @@ func (r *Resolver) Resolve(ctx context.Context, stack *models.Stack) (*models.St
 	if err := r.resolveVolumeConnections(ctx, effective); err != nil {
 		return nil, err
 	}
-	if err := resolveSelfOutputEnvVars(effective); err != nil {
+	if err := r.resolveSelfOutputEnvVars(effective); err != nil {
 		return nil, err
 	}
 	if err := r.resolveEnvConnections(ctx, effective); err != nil {
