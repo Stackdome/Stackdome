@@ -111,7 +111,7 @@ func (w *stackWorker) reconcile(ctx context.Context, stack *models.Stack) (worke
 }
 
 func (w *stackWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors.ServiceError) {
-	res, err := w.stackService.InternalList(ctx, "status->'state' IN ? OR deletion_timestamp IS NOT NULL",
+	res, err := w.stackService.InternalList(ctx, "status->>'state' IN ? OR deletion_timestamp IS NOT NULL",
 		[]models.StackState{
 			models.StackPending,
 			models.StackDeleting,
