@@ -7,6 +7,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/stores"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -20,31 +21,34 @@ const (
 )
 
 type deprovisionReconciler struct {
-	stackService     stackService
-	volumeService    volumeService
-	secretService    secretService
-	namespaceService namespaceService
-	logger           logger.Logger
-	clusterManager   clustermanager.ClusterManager
+	stackService      stackService
+	volumeService     volumeService
+	secretService     secretService
+	namespaceService  namespaceService
+	validationRecords stores.ResourceValidationRecordStore
+	logger            logger.Logger
+	clusterManager    clustermanager.ClusterManager
 }
 
 type DeprovisionReconcilerSpec struct {
-	StackService     stackService
-	NamespaceService namespaceService
-	SecretService    secretService
-	Logger           logger.Logger
-	VolumeService    volumeService
-	ClusterManager   clustermanager.ClusterManager
+	StackService      stackService
+	NamespaceService  namespaceService
+	SecretService     secretService
+	Logger            logger.Logger
+	VolumeService     volumeService
+	ValidationRecords stores.ResourceValidationRecordStore
+	ClusterManager    clustermanager.ClusterManager
 }
 
 func NewDeprovisionReconciler(spec DeprovisionReconcilerSpec) *deprovisionReconciler {
 	return &deprovisionReconciler{
-		stackService:     spec.StackService,
-		secretService:    spec.SecretService,
-		namespaceService: spec.NamespaceService,
-		logger:           spec.Logger,
-		volumeService:    spec.VolumeService,
-		clusterManager:   spec.ClusterManager,
+		stackService:      spec.StackService,
+		secretService:     spec.SecretService,
+		namespaceService:  spec.NamespaceService,
+		logger:            spec.Logger,
+		volumeService:     spec.VolumeService,
+		validationRecords: spec.ValidationRecords,
+		clusterManager:    spec.ClusterManager,
 	}
 }
 
@@ -76,6 +80,9 @@ func (r *deprovisionReconciler) Reconcile(ctx context.Context, stack *models.Sta
 }
 
 func (r *deprovisionReconciler) deleteResourcesFromDB(ctx context.Context, stack *models.Stack) error {
+	if err := r.validationRecords.DeleteByStack(ctx, stack.ID); err != nil {
+		return fmt.Errorf("failed to delete resource validation records for stack '%s': %w", stack.ID, err)
+	}
 	if err := r.stackService.InternalDeleteFromDB(ctx, stack.ID); err != nil {
 		return fmt.Errorf("failed to delete stack '%s' from db: %w", stack.ID, err)
 	}
