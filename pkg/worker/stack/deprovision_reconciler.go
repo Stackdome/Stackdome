@@ -80,8 +80,10 @@ func (r *deprovisionReconciler) Reconcile(ctx context.Context, stack *models.Sta
 }
 
 func (r *deprovisionReconciler) deleteResourcesFromDB(ctx context.Context, stack *models.Stack) error {
-	if err := r.validationRecords.DeleteByStack(ctx, stack.ID); err != nil {
-		return fmt.Errorf("failed to delete resource validation records for stack '%s': %w", stack.ID, err)
+	if r.validationRecords != nil {
+		if err := r.validationRecords.DeleteByStack(ctx, stack.ID); err != nil {
+			return fmt.Errorf("failed to delete resource validation records for stack '%s': %w", stack.ID, err)
+		}
 	}
 	if err := r.stackService.InternalDeleteFromDB(ctx, stack.ID); err != nil {
 		return fmt.Errorf("failed to delete stack '%s' from db: %w", stack.ID, err)
